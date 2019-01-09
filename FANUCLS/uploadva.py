@@ -2,7 +2,7 @@ from vcCommand import *
 import re
 import os.path
 import vcMatrix
-
+import uploadBackup
 sp = r'\s+'
 eq = r'\s*=\s*'
 comma = r'\s*,\s*'
@@ -44,7 +44,7 @@ re_frame = re.compile( frame, re.M )
 posregister = obracket + ginteger + comma + ginteger + cbracket + eq + r"\'(.*)\'"  + sp + 'Group' + colon + ginteger + sp + config + sp + xyzwpr
 re_posreg = re.compile( posregister, re.M )
 
-numregister = obracket + ginteger + cbracket + eq + greal + r"\s*\'(.*)\'" 
+numregister = obracket + ginteger + cbracket + eq + greal + r"\s*\'(.*)\'"
 re_numreg = re.compile( numregister, re.M )
 
 sysframe = r'\[\*SYSTEM\*\]' + r'(?P<FrameID>\$[a-zA-Z]+\w*)' + r'(.*)'
@@ -64,20 +64,196 @@ def OnAbort():
 def OnStop():
   cleanUp()
 
-#-------------------------------------------------------------------------------
-def getActiveProgram():
+def uploadva_(program, infile):
+  filestring = infile.read()
+  infile.close()
 
-  teach = app.TeachContext
-  routine = teach.ActiveScope
-  if routine:
-    if routine.ParentStatement:
-      routine = routine.ParentStatement.Routine
+  executor = program.Executor
+  comp = executor.Component
+  robCnt = executor.Controller
 
-  return routine.Program
+  blocks = {}
+  lineBuffer = ''
+  currentSection = ''
+  for line in filestring.split('\n'):
+
+    SYSFRAME = re.match(sysframe + end, line)
+    if SYSFRAME:
+      if currentSection: blocks[currentSection] = lineBuffer
+      lineBuffer = ''
+      currentSection = SYSFRAME.group(1)
+      continue
+    # endif
+
+    POSREG = re.match(posreg + end, line)
+    if POSREG:
+      if currentSection: blocks[currentSection] = lineBuffer
+      lineBuffer = ''
+      currentSection = POSREG.group(1)
+      continue
+    # endif
+
+    NUMREG = re.match(numreg + end, line)
+    if NUMREG:
+      if currentSection: blocks[currentSection] = lineBuffer
+      lineBuffer = ''
+      currentSection = NUMREG.group(1)
+      continue
+    # endif
+
+    lineBuffer += line + '\n'
+  # endfor
+  if currentSection: blocks[currentSection] = lineBuffer
+
+  numregString = blocks.get('$NUMREG', '')
+  if numregString:
+    numregs = re_numreg.finditer(numregString)
+    for n in numregs:
+      val = eval(n.group(2))
+      comment=delSpace(n.group(3))
+      # if val or comment:
+      nindex = eval(n.group(1))
+      prop = comp.createProperty(VC_REAL, 'Registers::R%i' % nindex + '%s' % comment)
+      prop.Value = val
+      prop.Group = nindex
+      # endif
+    # endfor
+  # endif
+
+  baseString = blocks.get('$MNUFRAME', '')
+  if baseString:
+    bases = re_frame.finditer(baseString)
+    for b in bases:
+      bindex = eval(b.group(2))
+      xx = eval(b.group('x'))
+      yy = eval(b.group('y'))
+      zz = eval(b.group('z'))
+      ww = eval(b.group('w'))
+      pp = eval(b.group('p'))
+      rr = eval(b.group('r'))
+
+      m = vcMatrix.new()
+      m.translateAbs(xx, yy, zz)
+      m.setWPR(ww, pp, rr)
+
+      if bindex > len(robCnt.Bases):
+        base = robCnt.addBase()
+        base.Name = 'Uframe%i' % bindex
+      # endif
+      robCnt.Bases[bindex - 1].PositionMatrix = m
+    # endfor
+  # endif
+
+  toolString = blocks.get('$MNUTOOL', '')
+  if toolString:
+    tools = re_frame.finditer(toolString)
+    for t in tools:
+      tindex = eval(t.group(2))
+      xx = eval(t.group('x'))
+      yy = eval(t.group('y'))
+      zz = eval(t.group('z'))
+      ww = eval(t.group('w'))
+      pp = eval(t.group('p'))
+      rr = eval(t.group('r'))
+
+      m = vcMatrix.new()
+      m.translateAbs(xx, yy, zz)
+      m.setWPR(ww, pp, rr)
+
+      if tindex > len(robCnt.Tools):
+        tool = robCnt.addTool()
+        tool.Name = 'Utool%i' % tindex
+      # endif
+
+      robCnt.Tools[tindex - 1].PositionMatrix = m
+    # endfor
+  # endif
+
+  posregString = blocks.get('$POSREG', '')
+  if posregString:
+    base = 0
+    tool = 0
+    posregs = re_posreg.finditer(posregString)
+    for preg_ in posregs:
+      pindex = eval(preg_.group(2))
+      comment = preg_.group(3)
+      if comment:
+        name_ = "PR[" + '%i' % pindex + ':' + comment + "]"
+      else:
+        name_ = "PR[" + '%i' % pindex + "]"
+
+      routine = program.findRoutine('POSREG_' + name_)
+      if routine:
+        routine.clear()
+      else:
+        routine = program.addRoutine('POSREG_' + name_)
+
+      xx = eval(preg_.group('x'))
+      yy = eval(preg_.group('y'))
+      zz = eval(preg_.group('z'))
+      ww = eval(preg_.group('w'))
+      pp = eval(preg_.group('p'))
+      rr = eval(preg_.group('r'))
+      cfg = preg_.group('fut')
+      if cfg == 'F': cfg = 'F U T'
+      if cfg == 'N': cfg = 'N U T'
+      jt1 = eval(preg_.group('t1'))
+      jt2 = eval(preg_.group('t2'))
+      jt3 = eval(preg_.group('t3'))
+
+      m = vcMatrix.new()
+      m.translateAbs(xx, yy, zz)
+      m.setWPR(ww, pp, rr)
+
+      stmt = routine.addStatement(VC_STATEMENT_PTPMOTION)
+      posFrame = stmt.Positions[0]
+      posFrame.PositionInReference = m
+      posFrame.Configuration = cfg
+      if base == 0:
+        stmt.Base = robCnt.Bases[0]
+      else:
+        stmt.Base = robCnt.Bases[base - 1]
+      # endif
+      if tool == 0:
+        stmt.Tool = robCnt.Tools[0]
+      else:
+        stmt.Tool = robCnt.Tools[tool - 1].Name
+
+      try:
+        posFrame.JointTurns4 = jt1
+        posFrame.JointTurns5 = jt2
+        posFrame.JointTurns6 = jt3
+      except:
+        pass
+      posFrame.Name = name_
+      # if comment:
+      # posFrame.Name = comment
+      # else:
+      # posFrame.Name = routine.Name + '_%i' % pindex
+
+      # endif
+      stmt.createProperty(VC_INTEGER, 'INDEX')
+      stmt.INDEX = pindex
+    # endfor
+  # endif
+
+  return True
+
+def delSpace(comment_):
+  split_char_ = re.compile(r' ')
+  comment_split_ = split_char_.split(comment_)
+  if comment_split_:
+    i = 1
+    comment_ = ''
+    while i <= len(comment_split_):
+      comment_ += comment_split_[i - 1]
+      i = i + 1
+  return comment_
+
 
 def OnStart():
   
-  program = getActiveProgram()
+  program = uploadBackup.getActiveProgram()
   if not program:
     app.messageBox("No program selected, aborting.","Warning",VC_MESSAGE_TYPE_WARNING,VC_MESSAGE_BUTTONS_OK)
     return False
@@ -100,162 +276,8 @@ def OnStart():
     print "Cannot open file \'%s\' for reading" % filename
     return
   #endtry
+  uploadva_(program,infile)
 
-  filestring = infile.read()
-  infile.close()
-
-  executor = program.Executor
-  comp = executor.Component
-  robCnt = executor.Controller
-
-  blocks = {}
-  lineBuffer = ''
-  currentSection = ''
-  for line in filestring.split('\n'):
-
-    SYSFRAME = re.match( sysframe + end, line)
-    if SYSFRAME:
-      if currentSection: blocks[currentSection] = lineBuffer
-      lineBuffer = ''
-      currentSection = SYSFRAME.group(1)
-      continue
-    #endif
-
-    POSREG = re.match( posreg + end, line)
-    if POSREG:
-      if currentSection: blocks[currentSection] = lineBuffer
-      lineBuffer = ''
-      currentSection = POSREG.group(1)
-      continue
-    #endif
-
-    NUMREG = re.match( numreg + end, line)
-    if NUMREG:
-      if currentSection: blocks[currentSection] = lineBuffer
-      lineBuffer = ''
-      currentSection = NUMREG.group(1)
-      continue
-    #endif
-
-    lineBuffer += line + '\n'
-  #endfor
-  if currentSection: blocks[currentSection] = lineBuffer
-
-  numregString = blocks.get('$NUMREG', '' )
-  if numregString:
-    numregs = re_numreg.finditer(numregString)
-    for n in numregs:
-      val = eval(n.group(2))
-      comment = n.group(3)
-      if val or comment:
-        nindex = eval(n.group(1))
-        prop = comp.createProperty( VC_REAL, 'Registers::R[%i]' % nindex )
-        prop.Value = val
-        prop.Group = nindex
-      #endif
-    #endfor
-  #endif
-
-  baseString = blocks.get('$MNUFRAME', '' )
-  if baseString:
-    bases = re_frame.finditer(baseString)
-    for b in bases:
-      bindex =eval(b.group(2))
-      xx = eval(b.group('x'))
-      yy = eval(b.group('y'))
-      zz = eval(b.group('z'))
-      ww = eval(b.group('w'))
-      pp = eval(b.group('p'))
-      rr = eval(b.group('r'))
-
-      m = vcMatrix.new() 
-      m.translateAbs( xx, yy, zz )
-      m.setWPR( ww, pp, rr )
-
-      if bindex > len(robCnt.Bases):
-        base = robCnt.addBase()
-        base.Name = 'Uframe%i' % bindex
-      #endif
-
-      robCnt.Bases[bindex-1].PositionMatrix = m
-    #endfor
-  #endif
-
-  toolString = blocks.get('$MNUTOOL', '' )
-  if toolString:
-    tools = re_frame.finditer(toolString)
-    for t in tools:
-      tindex =eval(t.group(2))
-      xx = eval(t.group('x'))
-      yy = eval(t.group('y'))
-      zz = eval(t.group('z'))
-      ww = eval(t.group('w'))
-      pp = eval(t.group('p'))
-      rr = eval(t.group('r'))
-
-      m = vcMatrix.new() 
-      m.translateAbs( xx, yy, zz )
-      m.setWPR( ww, pp, rr )
-
-      if tindex > len(robCnt.Tools):
-        tool = robCnt.addTool()
-        tool.Name = 'Utool%i' % tindex
-      #endif
-
-      robCnt.Tools[tindex-1].PositionMatrix = m
-    #endfor
-  #endif
-  
-  posregString = blocks.get('$POSREG', '' )
-  if posregString:
-    routine = program.findRoutine( 'PositionRegister' )
-    if routine:
-      routine.clear()
-    else:
-      routine = program.addRoutine( 'PositionRegister' )
-    
-    posregs = re_posreg.finditer(posregString)
-    for p in posregs:
-      pindex = eval(p.group(2))
-      comment = p.group(3)
-
-      xx = eval(p.group('x'))
-      yy = eval(p.group('y'))
-      zz = eval(p.group('z'))
-      ww = eval(p.group('w'))
-      pp = eval(p.group('p'))
-      rr = eval(p.group('r'))
-      cfg = p.group('fut')
-      if cfg == 'F': cfg = 'F U T'
-      if cfg == 'N': cfg = 'N U T'
-      t1 = eval(p.group('t1'))
-      t2 = eval(p.group('t2'))
-      t3 = eval(p.group('t3'))
-
-      m = vcMatrix.new() 
-      m.translateAbs( xx, yy, zz )
-      m.setWPR( ww, pp, rr )
-
-      stmt = routine.addStatement( VC_STATEMENT_PTPMOTION )
-      posFrame = stmt.Positions[0]
-      posFrame.PositionInReference = m
-      posFrame.Configuration = cfg
-      try:
-        posFrame.JointTurns4 = t1
-        posFrame.JointTurns5 = t2
-        posFrame.JointTurns6 = t3
-      except:
-        pass
-      if comment:
-        posFrame.Name = comment
-      else:
-        posFrame.Name = routine.Name + '_%i' % pindex
-      #endif
-      stmt.createProperty(VC_INTEGER, 'INDEX' )
-      stmt.INDEX = pindex
-    #endfor
-  #endif
-  
   return True
 
 #-------------------------------------------------------------------------------

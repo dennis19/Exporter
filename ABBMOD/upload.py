@@ -210,20 +210,20 @@ def OnStart():
   # workobject regular expression
   wobjregex = r"\\WObj:=(?P<workobject>[a-zA-Z0-9]+)"
   # tool definition regular expression
-  toolregex = r", *(?P<tooln>[a-zA-Z0-9]+)"  
+  toolregex = r", *(?P<tooln>[a-zA-Z0-9_]+)"  
   # get name of point
-  targetnameregex= r"(?P<name>[a-zA-Z0-9]+):="#
+  targetnameregex= r"(?P<name>[a-zA-Z0-9_]+):="#
   #name in move
-  targetmovenameregex=r" (?P<point>[a-zA-Z0-9]+),"#
+  targetmovenameregex=r" (?P<point>[a-zA-Z0-9_]+),"#
   #toolname
-  toolnameregex = r"(?P<toolnam>[a-zA-Z0-9]+)\\WObj"  
+  toolnameregex = r"(?P<toolnam>[a-zA-Z0-9_]+)\\WObj"  
   #get name of wobj
   movejregex = "MoveJ "
   moveLregex = "MoveL "
-  speedregex = r",v(?P<speed>[a-zA-Z0-9]+)," 
+  speedregex = r",v(?P<speed>[a-zA-Z0-9_]+)," 
   ifregex = "IF "
   elseregex = "ELSE"
-  ifcondregex ="IF (?P<cond>[a-zA-Z0-9]+) THEN"
+
   
   instFlag = False
   instructions = ''
@@ -254,256 +254,8 @@ def OnStart():
       # lineCount[1]-=1
       # continue
 
-    createStatement(routine,line,filestring,robCnt,scope)
+    createStatement(routine,line,filestring,robCnt,scope,program)
   
-    #rtmatch=re.findall(robtargetregex, line)
-    #print "line: %s" % line
-    # moveJdef=re.findall(movejregex,line)
-    
-    # print "line: %s" % line
-    # if moveJdef:
-      # createPTP(line,robCnt,routine)
-    # moveLdef=re.findall(moveLregex,line)
-    # if moveLdef:
-      # createLin(line,robCnt,routine)
-    # ifdef= re.findall(ifregex,line)
-    # if ifdef:
-	  # createIF(routine,line,filestring)  
-		
-
-		
-        # #joint turns for axis 1,4 and 6
-        # if s.Type== VC_STATEMENT_PTPMOTION:
-          # jointturnprops=["JointTurns1","JointTurns4","JointTurns6"]
-          # configindex=7
-          # for jointturnpropname in jointturnprops:
-            # jointturnprop=s.getProperty(jointturnpropname)
-            # if jointturnprop!=None:
-              # if float(match[configindex])>1:
-                # jointturnprop.Value=1
-              # elif float(match[configindex])<-2:
-                # jointturnprop.Value=-1
-            # configindex+=1
-        
-        # s.readFromTarget(t)	
-
-             
-        # # external axes
-        # for j in range(6):
-          # if match[j+11]!="9E+09" and match[j+11]!="9e+09":
-            # extjoint=s.getProperty("ExternalJoint"+str(j+1))
-            # if extjoint!=None:
-              # extjoint.Value=float(match[j+11])
-            # else:
-              # firstwarning=False
-              # app.messageBox("Undefined external axis \'%s\' in robot program" % (j+1),"Warning",VC_MESSAGE_TYPE_WARNING,VC_MESSAGE_BUTTONS_OK)
-        
-        # if s.Type== VC_STATEMENT_LINMOTION:
-          # s.Acceleration = 0
-          # s.Deceleration = 0
-          # s.AngularAcceleration = 0
-          # s.AngularDeceleration = 0
-          # s.MaxSpeed = feedrate
-    # MODULE = re.match(r'MODULE' + sp + galphanum + '(?:\s+Macro)?'+end,line)
-    # if MODULE:
-      # progname = MODULE.group(1)
-      # program.deleteRoutine( progname )
-      # routine = program.findRoutine( progname )
-      # if not routine:
-        # routine = program.addRoutine( progname )
-      # else:
-        # routine.clear()
-      # ###continue
-    # #endif
-
-    # MN = re.match(r'!MN' + end, line )
-    # if MN:
-      # print "MN: %s" % MN
-      # instFlag = True
-      # ###continue
-    # #endif
-
-    # POS = re.match(r'/POS' + end, line )
-    # if POS:
-      # break
-    # #endif
-
-    # if instFlag:
-      # pass
-    # #endif
-    # instructions += line + '\n'
-  # #endfor
-  # note =  comp.findBehaviour( progname )
-  # if not note:
-    # note = comp.createBehaviour( VC_NOTE, progname )
-  # note.Note = instructions
-  # comp.createProperty(VC_BOOLEAN,"%s::SkipExecution"%progname)
-
-  # ###routine.beginBatch()
-  # positions = re_pos.finditer(filestring)
-  # for p in positions:
-    # idx = eval(p.group('pnum'))
-    # try:
-      # comment = p.group('comment')
-    # except:
-      # comment = ''
-    # xx = eval(p.group('x'))
-    # yy = eval(p.group('y'))
-    # zz = eval(p.group('z'))
-    # ww = eval(p.group('w'))
-    # pp = eval(p.group('p'))
-    # rr = eval(p.group('r'))
-    # uf = eval(p.group('uf'))
-    # ut = eval(p.group('ut'))
-
-    # exJvals = []
-    # groups = re_group.finditer(p.group('groups'))
-    # for g in groups:
-      # jcoords = re_jcoord.finditer(g.group('jcoords'))
-      # for j in jcoords:
-        # exJvals.append(eval(j.group('jval')))
-      # #endfor
-    # #endfor
-    # ecoords = re_ecoord.finditer(p.group('groups'))
-    # for j in ecoords:
-      # exJvals.append(eval(j.group('jval')))
-    # #endfor
-
-    # m = vcMatrix.new() 
-    # m.translateAbs( xx, yy, zz )
-    # m.setWPR( ww, pp, rr )
-
-    # stmt = routine.addStatement( VC_STATEMENT_PTPMOTION )
-    # if comment:
-      # posName = '%s_%s' % (progname,comment[1:])
-      # posName = 'P[%d:%s]' % (idx,comment[1:])
-    # else:
-      # posName = '%s_%i' % (progname,idx)
-      # posName = 'P[%d]' % idx
-    # #endif
-
-    # posFrame = stmt.Positions[0]
-    # posFrame.Name = posName 
-    # cfg = p.group('fut')
-    # if cfg == 'F': cfg = 'F U T'
-    # if cfg == 'N': cfg = 'N U T'
-    # posFrame.Configuration = cfg
-    # t1 = eval(p.group('t1'))
-    # t2 = eval(p.group('t2'))
-    # t3 = eval(p.group('t3'))
-    # try:
-      # posFrame.JointTurns4 = t1
-      # posFrame.JointTurns5 = t2
-      # posFrame.JointTurns6 = t3
-    # except:
-      # pass
-
-    # baseNum = uf
-    # if baseNum == 0:
-      # pass
-      # stmt.Base = None
-    # else:
-      # stmt.Base = robCnt.Bases[baseNum-1]
-    # #endif
-
-    # toolNum = ut
-    # if toolNum == 0:
-      # stmt.Tool = None
-    # else:
-      # stmt.Tool = robCnt.Tools[toolNum-1]
-    # #endif
-    # stmt.createProperty(VC_INTEGER, 'INDEX' )
-    # stmt.INDEX = idx
-
-    # posFrame.setExternalJoints( exJvals )
-
-    # posFrame.PositionInReference = m
-    # stmt.writeToTarget( trg )
-    # jv = trg.JointValues
-    # jv[3] += 360*t2
-    # jv[5] += 360*t3
-    # posFrame.setJoints(jv)
-  # #endfor
-
-  # positions = re_jpos.finditer(filestring)
-  # for p in positions:
-    # idx = eval(p.group('pnum'))
-    # try:
-      # comment = p.group('comment')
-    # except:
-      # comment = ''
-    # j1 = eval(p.group('j1'))
-    # j2 = eval(p.group('j2'))
-    # j3 = eval(p.group('j3'))
-    # j4 = eval(p.group('j4'))
-    # j5 = eval(p.group('j5'))
-    # j6 = eval(p.group('j6'))
-    # uf = eval(p.group('uf'))
-    # ut = eval(p.group('ut'))
-
-    # jv = [ j1, j2, j3, j4, j5, j6 ]
-    # groups = re_group.finditer(p.group('groups'))
-    # for g in groups:
-      # jcoords = re_jcoord.finditer(g.group('jcoords'))
-      # for j in jcoords:
-        # jv.append(eval(j.group('jval')))
-      # #endfor
-    # #endfor
-    # ecoords = re_ecoord.finditer(p.group('groups'))
-    # for j in ecoords:
-      # jv.append(eval(j.group('jval')))
-    # #endfor
-
-    # if exJvals: jv.extend(exJvals)
-
-    # stmt = routine.addStatement( VC_STATEMENT_PTPMOTION )
-    # stmt.Positions[0].setJoints( jv )
-
-    # baseNum = uf
-    # if baseNum == 0:
-      # pass
-      # stmt.Base = "*NULL*"
-    # else:
-      # stmt.Base = robCnt.Bases[baseNum-1].Name
-    # #endif
-
-    # toolNum = ut
-    # if toolNum == 0:
-      # stmt.Tool = "*NULL*"
-    # else:
-      # stmt.Tool = robCnt.Tools[toolNum-1].Name
-    # #endif
-    # if comment:
-      # stmt.Name = '%s_%s' % (progname,comment[1:])
-    # else:
-      # stmt.Name = '%s_%i' % (progname,idx)
-    # #endif
-    # stmt.createProperty(VC_INTEGER, 'INDEX' )
-    # stmt.INDEX = idx
-  # #endfor
-  # ###routine.endBatch()
-
-  # routines = mainRoutine.StepValues
-  # if 'PNS' not in routines:
-    # routines.insert(0, 'PNS')
-    # mainRoutine.StepValues = routines
-
-  # if 'RSL' not in routines:
-    # routines.insert(0, 'RSL')
-    # mainRoutine.StepValues = routines
-
-  # if progname not in routines:
-    # routines.append(progname)
-    # mainRoutine.StepValues = routines
-  # mainRoutine.Value = progname
-
-  # addScript( comp )
-  # script = comp.findBehaviour( 'LSExecutor' )
-
-  # connections = pnsSignal.Connections
-  # if script not in connections:
-    # connections.append(script)
-    # pnsSignal.Connections = connections
 
   return True
 
@@ -532,8 +284,10 @@ def readPos(s,line,robCnt):
           m.setQuaternion(float(match[4]),float(match[5]),float(match[6]),float(match[3]))
           t = robCnt.createTarget(m)
           if s.Type==VC_STATEMENT_PTPMOTION:
-            t.CartesianSpeed=readSpeed(line)
+            #t.CartesianSpeed=readSpeed(line)
             s.JointSpeed=float(readSpeed(line))/6000.00
+            help= float(readSpeed(line))/6000.00
+            print "s.JointSpeed %f" %help
             #s.MaxSpeed=readSpeed(line)
           elif s.Type==VC_STATEMENT_LINMOTION:
 		    s.MaxSpeed=readSpeed(line)
@@ -581,46 +335,45 @@ def readSpeed(line):
   speeddef= re.search(speedregex,line)
   speed = speeddef.group('speed')
   print "speed: %s" % speed
-  if speed == 'max':     return 5000
-  elif speed == 4000:  return 4000
-  elif speed == 3000:  return 3000
-  elif speed == 2500:  return 2500
-  elif speed == 2000:  return 2000
-  elif speed == 1500:  return 1500
-  elif speed == 1000:  return 1000
-  elif speed == 800:    return 800
-  elif speed == 600:    return 600
-  elif speed == 500:    return 500
-  elif speed == 400:    return 400
-  elif speed == 300:    return 300
-  elif speed == 200:    return 200
-  elif speed == 150:    return 150
-  elif speed == 100:    return 100
-  elif speed == 80:     return 80
-  elif speed == 60:     return 60
-  elif speed == 50:     return 50
-  elif speed == 40:     return 40
-  elif speed == 30:     return 30
-  elif speed == 20:     return 20
-  elif speed == 10:     return 10
+  if speed == 'max':     return 6000
+  elif speed == "4000":  return 4000
+  elif speed == "3000":  return 3000
+  elif speed == "2500":  return 2500
+  elif speed == "2000":  return 2000
+  elif speed == "1500":  return 1500
+  elif speed == "1000":  return 1000
+  elif speed == "800":    return 800
+  elif speed == "600":    return 600
+  elif speed == "500":    return 500
+  elif speed == "400":    return 400
+  elif speed == "300":    return 300
+  elif speed == "200":    return 200
+  elif speed == "150":    return 150
+  elif speed == "100":    return 100
+  elif speed == "80":     return 80
+  elif speed == "60":     return 60
+  elif speed == "50":     return 50
+  elif speed == "40":     return 40
+  elif speed == "30":     return 30
+  elif speed == "20":     return 20
+  elif speed == "10":     return 10
   else:                  return 5 
 
   
 def createPTP(line,robCnt,routine,scope):
   if scope:
-    if(scope.ParentStatement.Type==VC_STATEMENT_IF):
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
       s= scope.addStatement(VC_STATEMENT_PTPMOTION)
   else:
     s = routine.addStatement(VC_STATEMENT_PTPMOTION)
   readPos(s,line,robCnt)
   defineTool(s,line,robCnt)  
   defineWObj(s,line,robCnt)
-  #readSpeed(s,line,robCnt)
   #get accuracy
   return s
 def createLin(line,robCnt,routine,scope):
   if scope:
-    if(scope.ParentStatement.Type==VC_STATEMENT_IF):
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
       s= scope.addStatement(VC_STATEMENT_LINMOTION)
   else:
     s = routine.addStatement(VC_STATEMENT_LINMOTION)
@@ -629,21 +382,30 @@ def createLin(line,robCnt,routine,scope):
   defineTool(s,line,robCnt)  
   defineWObj(s,line,robCnt)
   return s
-  #readSpeed(s,line,robCnt)
+
 		
 		# #get accuracy
-def createIF(routine,line,filestring,robCnt,scope):
+def createIF(routine,line,filestring,robCnt,scope,program):
+  ifcondregex ="IF (?P<cond>[a-zA-Z0-9_]+)(?P<equal>[^a-zA-Z0-9_]+)(?P<value>[a-zA-Z0-9_]+) THEN"
   inif=0
   inelse=0
-  global elseregex,ifcondregex,lineCount,lineSkip,i
+  conddef=re.search(ifcondregex,line)
+  equal=conddef.group('equal')
+  #notdef=conddef.group('not')
+  print "equal: %s" % equal
+  if conddef.group('equal')== "=":
+    equal = "=="
+  # elif notdef:
+    # equal = "!="
+  global lineCount,lineSkip,i
   endifregex="ENDIF"
   if scope:
-    if(scope.ParentStatement.Type==VC_STATEMENT_IF):
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
       s= scope.addStatement(VC_STATEMENT_IF)
   else:
     s = routine.addStatement(VC_STATEMENT_IF)
   conddef=re.search(ifcondregex,line)
-  cond=conddef.group('cond')
+  cond=conddef.group('cond')+equal+conddef.group('value')
   print "cond: %s" % cond  
   s.Condition=cond
   for lineRT in filestring.split('\n'):
@@ -654,7 +416,7 @@ def createIF(routine,line,filestring,robCnt,scope):
       lineCount[i]-=1
       print "lineCount[i]: %s" % (lineCount[i])
       continue	  
-    if re.findall(endifregex,lineRT):
+    if re.findall("ENDIF",lineRT):
 	  print "ENDIF"
 	  inif=0
 	  inelse=0
@@ -662,7 +424,7 @@ def createIF(routine,line,filestring,robCnt,scope):
 	  print "lineCount[i-1]: %s" % (lineCount[i-1])
 	  break
 
-    if re.findall(elseregex,lineRT):
+    if re.findall("ELSE",lineRT):
       print "elsescope"
       inif=0
       inelse=1
@@ -671,7 +433,7 @@ def createIF(routine,line,filestring,robCnt,scope):
       continue	  
     
     if inelse==1:
-      selse=createStatement(routine,lineRT,filestring,robCnt,s.ElseScope)
+      selse=createStatement(routine,lineRT,filestring,robCnt,s.ElseScope,program)
       print "selse: %s" % (selse)
       s.ElseScope.Statements.append(selse)
       print "lineCount[i-1]: %s" % (lineCount[i-1]) 
@@ -680,7 +442,7 @@ def createIF(routine,line,filestring,robCnt,scope):
     if inif==1:
       print "createStatement"
       print "lineRT+1: %s" % (lineRT)
-      sthen=createStatement(routine,lineRT,filestring,robCnt,s.ThenScope)
+      sthen=createStatement(routine,lineRT,filestring,robCnt,s.ThenScope,program)
       print "sthen+1: %s" % (sthen)
       s.ThenScope.Statements.append(sthen)
       lineCount[i-1]+=1
@@ -698,9 +460,170 @@ def createIF(routine,line,filestring,robCnt,scope):
     #else:
 	  #print "move"
   return s
-def createStatement(routine,line,filestring,robCnt,scope):
+
+def createWhile(routine,line,filestring,robCnt,scope,program):
+  whileregex= r"WHILE (?P<cond>[a-zA-Z0-9_]+)="
+  conddef= re.search(whileregex,line)
+  if scope:
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+      s= scope.addStatement(VC_STATEMENT_WHILE)
+  else:
+    s = routine.addStatement(VC_STATEMENT_WHILE)
+  cond=conddef.group('cond')
+  inWhile=0
+  print "cond %s" %cond
+  s.Condition=cond
+  for lineRT in filestring.split('\n'):
+    print "i: %s" % (i) 
+    #lineCount+=1
+    #print "lineRT: %s" % lineRT
+    if lineCount[i]!=0:
+      lineCount[i]-=1
+      print "lineCount[i]: %s" % (lineCount[i])
+      continue	  
+    if re.findall("ENDWHILE",lineRT):
+	  print "ENDWHILE"
+	  inWhile=0
+	  #lineCount[i-1]+=1
+	  print "lineCount[i-1]: %s" % (lineCount[i-1])
+	  break
+
+    if inWhile==1:
+      print "createStatement"
+      print "lineRT+1: %s" % (lineRT)
+      sthen=createStatement(routine,lineRT,filestring,robCnt,s.Scope,program)
+      print "sthen+1: %s" % (sthen)
+      s.Scope.Statements.append(sthen)
+      lineCount[i-1]+=1
+      print "lineCount[i-1]: %s" % (lineCount[i-1])     	  
+	  
+    if re.findall(line,lineRT):
+      inWhile=1
+      print "next is whilescope "
+      print "lineCount[i-1]: %s" % (lineCount[i-1])
+      continue
+  lineCount[i]=lineCount[i-1]
+  lineCount[0]+=lineCount[i-1]
+  
+
+  
+def createComment(routine,line,filestring,robCnt,scope):
+  commentregex=r"!(?P<comment>[a-zA-Z0-9_]+)"
+  commentString=re.search(commentregex,line)
+  if scope:
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+      s= scope.addStatement(VC_STATEMENT_COMMENT)
+  else:
+    s = routine.addStatement(VC_STATEMENT_COMMENT)
+  s.Comment=commentString.group('comment')
+  return s
+  
+def createBreak(scope):
+
+  if scope:
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+      s= scope.addStatement(VC_STATEMENT_BREAK)
+  else:
+    s = routine.addStatement(VC_STATEMENT_BREAK)
+  return s	
+
+def createReturn(scope):
+
+  if scope:
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+      s= scope.addStatement(VC_STATEMENT_RETURN)
+  else:
+    s = routine.addStatement(VC_STATEMENT_RETURN)
+  return s	  
+  
+def createCall(routine,line,filestring,robCnt,scope,callDef,program):  
+
+  if scope:
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+      s= scope.addStatement(VC_STATEMENT_CALL)
+  else:
+    s = routine.addStatement(VC_STATEMENT_CALL)
+  
+  print "s: %s" %s
+  
+  callRoutine = program.findRoutine( callDef.group('routine') )
+  if not callRoutine:
+    callRoutine = program.addRoutine( callDef.group('routine') )  
+  #callRoutine.Name=callDef.group('routine')
+  print "callRoutine: %s" %callRoutine
+  s.Routine=callRoutine
+  return s
+  
+def createSetBin(routine,line,filestring,robCnt,scope,program):
+  SetBinregex = "SetDO do(?P<port>[a-zA-Z0-9]+),(?P<value>[a-zA-Z0-9]+);"
+  if scope:
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+      s= scope.addStatement(VC_STATEMENT_SETBIN)
+  else:
+    s = routine.addStatement(VC_STATEMENT_SETBIN)
+  PortValue=re.search(SetBinregex,line)
+  
+  port=PortValue.group('port')
+  value=PortValue.group('value')
+  
+  print "value: %s" %value
+  print "port: %s" %port
+  
+  s.OutputPort=int(port)
+  s.OutputValue=int(value)
+  return s	
+  
+def createWaitBin(routine,line,filestring,robCnt,scope,program):
+  WaitBinregex = "WaitDI di(?P<port>[a-zA-Z0-9_]+),(?P<value>[a-zA-Z0-9]+);"
+  if scope:
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+      s= scope.addStatement(VC_STATEMENT_WAITBIN)
+  else:
+    s = routine.addStatement(VC_STATEMENT_WAITBIN)
+  PortValue=re.search(WaitBinregex,line)
+  
+  port=PortValue.group('port')
+  value=PortValue.group('value')
+  
+  print "value: %s" %value
+  print "port: %s" %port
+  
+  s.InputPort=int(port)
+  s.InputValue=int(value)
+  return s	  
+ 
+def createSetProperty(routine,line,filestring,robCnt,scope,program):
+  SetPropregex = "(?P<TargetProperty>[a-zA-Z0-9_]+) := (?P<value>[a-zA-Z0-9]+);"
+  if scope:
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+      s= scope.addStatement(VC_STATEMENT_SETPROPERTY)
+  else:
+    s = routine.addStatement(VC_STATEMENT_SETPROPERTY)
+ 
+  PropertyValue=re.search(SetPropregex,line)
+  if not PropertyValue:
+    SetPropregex = "(?P<TargetProperty>[a-zA-Z0-9_]+):=(?P<value>[a-zA-Z0-9]+);"
+    PropertyValue=re.search(SetPropregex,line)
+  s.TargetProperty=PropertyValue.group('TargetProperty')
+  s.ValueExpression=PropertyValue.group('value')
+  
+  
+def createDelay(routine,line,filestring,robCnt,scope,program):
+  Delayregex="WaitTime (?P<time>[a-zA-Z0-9]+);"
+  if scope:
+    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+      s= scope.addStatement(VC_STATEMENT_DELAY)
+  else:
+    s = routine.addStatement(VC_STATEMENT_DELAY)
+  TimeValue=re.search(Delayregex,line)
+  s.Delay=int(TimeValue.group('time'))
+ 
+def createStatement(routine,line,filestring,robCnt,scope,program):
   global movejregex,moveLregex,ifregex,i
   i+=1
+  whileloopregex = " WHILE "
+  callregex="(?P<routine>[a-zA-Z0-9_]+);"
+  variableregex="(?P<a>[a-zA-Z0-9_]+):=(?P<b>[a-zA-Z0-9]+);"
   moveJdef=re.findall(movejregex,line)	
   print "line: %s" % line
   if moveJdef:
@@ -712,12 +635,53 @@ def createStatement(routine,line,filestring,robCnt,scope):
     s=createLin(line,robCnt,routine,scope)
     i-=1
     return s	
-  ifdef= re.findall(ifregex,line)
-  if ifdef:
-    s=createIF(routine,line,filestring,robCnt,scope)
+  #ifdef= re.findall(ifregex,line)
+  if re.findall(" IF",line):
+    s=createIF(routine,line,filestring,robCnt,scope,program)
     i-=1	
     return s
-  i-=1	
+  if re.findall("!",line):
+    s=createComment(routine,line,filestring,robCnt,scope)
+    i-=1
+    return s
+  if re.findall("BREAK;",line):
+    s=createBreak(scope)
+    i-=1
+    return s
+  if re.findall("RETURN;",line):
+    s=createReturn(scope)
+    i-=1
+    return s	
+  if re.findall(" WHILE ",line):
+    s=createWhile(routine,line,filestring,robCnt,scope,program)
+    i-=1
+    return s
+  if re.findall("SetDO ",line):
+    s=createSetBin(routine,line,filestring,robCnt,scope,program)
+    i-=1
+    return s
+  if re.findall("WaitDI ",line):
+    s=createWaitBin(routine,line,filestring,robCnt,scope,program)
+    i-=1
+    return s
+  if re.findall("WaitTime",line):
+    s=createDelay(routine,line,filestring,robCnt,scope,program)
+    i-=1
+    return s
+  variableDef=	re.search(callregex,line)
+  if variableDef:
+    s=createSetProperty(routine,line,filestring,robCnt,scope,program)
+    i-=1
+    return s
+  callDef=	re.search(callregex,line)
+  if callDef:
+    s=createCall(routine,line,filestring,robCnt,scope,callDef,program)
+    i-=1
+    return s
+	
+  i-=1
+    
+  
   		
 #-------------------------------------------------------------------------------
 

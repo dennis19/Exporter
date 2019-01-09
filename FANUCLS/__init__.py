@@ -3,6 +3,11 @@ from vcApplication import *
 def OnStart():
   localize = findCommand('netCommand') 
 
+  cmduri = getApplicationPath() + 'uploadBackup.py'
+  cmd = loadCommand('FanucUploadBackup', cmduri)
+  addMenuItem('VcProgramStatements/ProgramStatements/LS', 'Upload FANUC Backup', -1, cmd.Name, 'Uploads FANUC Backup into simulation environment', 'rgImportGeneral' )
+
+
   cmduri = getApplicationPath() + 'convert.py'
   cmd = loadCommand('FanucConvert', cmduri)
   addMenuItem('VcProgramStatements/ProgramStatements/LS', 'Convert RSL program to FANUC LS', -1, cmd.Name, 'Converts the currently selected RSL subprogram into a FANUC LS program', 'rsMetadataShow' )
@@ -22,6 +27,11 @@ def OnStart():
   cmduri = getApplicationPath() + 'uploadva.py'
   cmd = loadCommand('FanucUploadVA', cmduri)
   addMenuItem('VcProgramStatements/ProgramStatements/LS', 'Upload FANUC LS VA data file', -1, cmd.Name, 'Uploads a FANUC LS VA System Data file', 'rRestoreLayout' )
+
+  cmduri = getApplicationPath() + 'uploadsum.py'
+  cmd = loadCommand('FanucUploadSum', cmduri)
+  addMenuItem('VcProgramStatements/ProgramStatements/LS', 'Upload FANUC LS summary data file', -1, cmd.Name, 'Uploads a FANUC LS Summary System Data file', 'rRestoreLayout' )
+
 
   cmduri = getApplicationPath() + 'download.py'
   cmd = loadCommand('FanucDownloadLS', cmduri)

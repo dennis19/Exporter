@@ -1,6 +1,6 @@
 from vcCommand import *
 import time
-
+import re
 #-------------------------------------------------------------------------------
 app = getApplication()
 
@@ -203,7 +203,7 @@ def writeTargetDefinition(statement,indentation,line):
   return line
 
 def writeBreak(statement,indentation,line):
-  line+= " "*indentation+"Break;\n"
+  line+= " "*indentation+"BREAK;\n"
   return line 
   #output_file.write(" "*indentation+"Break;\n")
 
@@ -261,7 +261,12 @@ def writeHalt(statement,indentation):
 
 def writeIf(statement,indentation,line):
   cnd = statement.Condition.strip()
-  line += " "*indentation+"IF %s THEN\n" %(cnd)
+  ifcondregex ="(?P<cond>[a-zA-Z0-9_]+)(?P<equal>[^a-zA-Z0-9_]+)(?P<value>[a-zA-Z0-9_]+)"
+  conddef=re.search(ifcondregex,cnd)
+  if conddef.group('equal')== "==":
+    equal = "="
+  cond=conddef.group('cond')+equal+conddef.group('value')
+  line += " "*indentation+"IF %s THEN\n" %(cond)
   #output_file.write(" "*indentation+"IF %s THEN\n" %(cnd))
   indentation += 2
   for s in statement.ThenScope.Statements:
