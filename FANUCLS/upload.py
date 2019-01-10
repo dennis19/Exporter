@@ -146,7 +146,7 @@ def upload_programs(program_,infile):
         lineskip_[depth] = lineskip_[depth] - 1
         continue
       else:
-        createStatement(line_, routine_, rob_cnt_, program_, filestring_, scope_);
+        createStatement(line_, rob_cnt_, routine_, program_, filestring_, scope_);
     # endif
     instructions_ += line_ + '\n'
   # endfor
@@ -183,57 +183,51 @@ def OnStart():
   upload_programs(program_,infile)
   return True
 
-def createStatement(line,routine,robCnt,program,filestring,scope):
+def createStatement(line,robCnt,routine,program,filestring,scope):
   global depth
   depth=depth+1
   if re.findall(":J ",line):
-    s=createPTP(line,robCnt,routine,filestring,scope,program)
+    s=createPTP(line,robCnt,routine,filestring,scope,program)#+
     depth = depth - 1
     return s
   elif re.findall(":L ",line):
-    s=createLinear(line,robCnt,routine,filestring,scope,program)
+    s=createLinear(line,robCnt,routine,filestring,scope,program)#+
     depth = depth - 1
     return s
   elif re.findall(" IF",line):
-    s=createIF(routine,line,filestring,robCnt,program,scope)
+    s=createIF(line,routine,filestring,scope,program)#+
     depth = depth - 1
     return s
   elif re.findall("DO"+obracket+"(?P<Nr>[a-zA-Z0-9_]+)"+ '(?P<comment>(?:\s*:.*)?)'+cbracket+eq,line):
-    s=createSetDO(routine,line,filestring,robCnt,program,scope)
+    s=createSetDO(line,routine,scope)#+
     depth = depth - 1
     return s
   elif re.findall("WAIT ",line):
-    s=createWaitDI(routine,line,filestring,robCnt,scope,program)
+    s=createWaitDI(line,routine,scope)#+
     depth = depth - 1
     return s
   elif re.findall('SELECT',line):
-    s=createSELECT(routine,line,filestring,robCnt,program,scope)
+    s=createSELECT(line,robCnt,routine,filestring,scope,program)
     depth = depth - 1
     return s
   elif re.findall("CALL",line):
-    s=createCall(routine,line,filestring,robCnt,scope,program)
+    s=createCall(line,routine,scope,program)
     depth = depth - 1
     return s
   elif re.findall(" !(?P<Nr>[a-zA-Z0-9_/-]+)",line):
-    s=createComment(routine,line,filestring,robCnt,scope)
+    s=createComment(line,routine,scope)
     depth = depth - 1
     return s
   elif re.findall("LBL",line)and not re.findall('JMP',line):
-    s=createLBL(routine,scope,line)
+    s=createLBL(line,routine,scope)
     depth = depth - 1
     return s
   elif re.findall('JMP',line):
-    JmpLblGroup = re.search("JMP (?P<JmpLbl>[a-zA-Z0-9\[\]\:_]+)", line)
-    if JmpLblGroup:
-      JmpLbl = JmpLblGroup.group('JmpLbl')
-      JmpLblNrGroup = re.search("LBL" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)", JmpLbl)
-      nr_ = JmpLblNrGroup.group('Nr')
-      s=JMP(scope,routine,nr_)
-      depth = depth - 1
-      return s
+    s=createJMP(line,routine,scope)
+    depth = depth - 1
+    return s
   elif re.findall('END',line):
-    s = addStatement(scope, routine, VC_STATEMENT_COMMENT)
-    s.Comment = 'END'
+    s=createReturn(routine,scope)
     depth = depth - 1
     return s
   else:
@@ -306,25 +300,6 @@ def readPos(s,line,robCnt,filestring):
         else:
           s.Tool = robCnt.Tools[tool-1].Name
 
-
-
-    #endif
-	  #endif
-    #endfor
-  #endif
-  # exJvals = []
-          # groups = re_group.finditer(p.group('groups'))
-          # for g in groups:
-            # jcoords = re_jcoord.finditer(g.group('jcoords'))
-            # for j in jcoords:
-              # exJvals.append(eval(j.group('jval')))
-            # #endfor
-          # #endfor
-          # ecoords = re_ecoord.finditer(p.group('groups'))
-          # for j in ecoords:
-            # exJvals.append(eval(j.group('jval')))
-          # #endfor
-
 def readTool(line):
   toolMatch=re.search(ut,line)
   toolDef=0
@@ -341,9 +316,6 @@ def readBase(line):
     	  
 		  
 def setConfiguration(line):
-  # t1Def = eval(cfgMatch.group('t1'))
-  # t2Def = eval(cfgMatch.group('t2'))
-  # t3Def = eval(cfgMatch.group('t3'))
   cfgMatch = re.search(cfg,line)
   cfgDef=""
   if cfgMatch:
@@ -357,7 +329,7 @@ def setCoordinates(matchString,matchVar,line):
     idmatched = float(matched.group(matchVar))	
   return idmatched
 
-def createSELECT(routine,line,filestring,robCnt,program,scope):
+def createSELECT(line,robCnt,routine,filestring,scope,program):
   global lineskip_,depth
   in_select_=0
   line_nr_=getLineNr(line)
@@ -365,7 +337,7 @@ def createSELECT(routine,line,filestring,robCnt,program,scope):
     select_choices_= re.search(eq+"(?P<Nr>[0-9_]+)"+comma,line_select_)
     if re.findall('ELSE,',line_select_):
       in_select_=0
-      selse=createStatement(line_select_,routine,robCnt,program,filestring,s.ElseScope)
+      selse=createStatement(line_select_,robCnt,routine,program,filestring,s.ElseScope)
       if selse:
         s.ElseScope.Statements.append(selse)
         setLineSkip()
@@ -373,16 +345,10 @@ def createSELECT(routine,line,filestring,robCnt,program,scope):
     if (line_nr_ == getLineNr(line_select_) and in_select_==0) or  (in_select_==1 and select_choices_):
       s = addStatement(scope, routine, VC_STATEMENT_IF)
       call_fct_=re.search(",CALL",line_select_)
-      JmpLblGroup = re.search(",JMP (?P<JmpLbl>[a-zA-Z0-9\[\]_]+)", line_select_)
       if call_fct_:
-        sthen = createCall(routine, line_select_, filestring, robCnt, s.ThenScope, program)
+        sthen = createCall(line_select_,routine, s.ThenScope, program)
         s.ThenScope.Statements.append(sthen)
-      if JmpLblGroup:
-        JmpLbl=JmpLblGroup.group('JmpLbl')
-        JmpLblNrGroup=re.search("LBL"+obracket+"(?P<Nr>[a-zA-Z0-9_]+)",JmpLbl)
-        JmpLblNr=JmpLblNrGroup.group('Nr')
-        if re.findall("LBL"+obracket+JmpLblNr,line_select_):
-          JMP(s.ThenScope,routine,JmpLblNr)
+        createJMP(line_select_,routine,s.ThenScope)
       s.Condition = makeConodition(line, 'SELECT')+select_choices_.group("Nr")
       if in_select_==1:
         setLineSkip()
@@ -390,7 +356,7 @@ def createSELECT(routine,line,filestring,robCnt,program,scope):
       continue
   return s
 
-def createIF(routine,line,filestring,robCnt,program,scope):
+def createIF(line,routine,filestring,scope,program):
   #create IfStatement
   s = addStatement(scope, routine, VC_STATEMENT_IF)
   s.Condition=makeConodition(line,'IF')
@@ -401,40 +367,10 @@ def createIF(routine,line,filestring,robCnt,program,scope):
   for lineIf in filestring.split('\n'):
 
     if line_nr_==getLineNr(lineIf):
-      JmpLblGroup = re.search(",JMP (?P<JmpLbl>[a-zA-Z0-9\[\]_]+)", lineIf)
       call_fct_=re.search(",CALL",lineIf)
-      if JmpLblGroup:
-        JmpLbl=JmpLblGroup.group('JmpLbl')
-        JmpLblNrGroup=re.search("LBL"+obracket+"(?P<Nr>[a-zA-Z0-9_]+)",JmpLbl)
-        JmpLblNr=JmpLblNrGroup.group('Nr')
-        for lineInThen in filestring.split('\n'):
-          if re.findall("LBL"+obracket+JmpLblNr,lineInThen) and not re.findall("JMP", lineInThen):
-            JMP(s.ThenScope,routine,JmpLblNr)
-            break
-        # for lineInElse in filestring.split('\n'):
-        #   if inelse_ and not lineskip_[depth] == 0:
-        #
-        #     lineskip_[depth] = lineskip_[depth] - 1
-        #     continue
-        #   if re.findall("LBL"+obracket+JmpLblNr,lineInElse) and not re.findall("JMP", lineInElse) and inelse_:
-        #      inelse_=0
-        #      break
-        #   if inelse_==1:
-        #     selse=createStatement(lineInElse,routine,robCnt,program,filestring,s.ElseScope);
-        #     if selse:
-        #        s.ElseScope.Statements.append(selse)
-        #        setLineSkip()
-        #   if getLineNr(lineInElse)==getLineNr(lineIf):#lineInElse==lineIf:
-        #     inelse_=1
-        #     continue
-        #   #print "lineInElse: %s" % lineInElse
-        #   if re.search(semicolon,lineInElse) and inelse_==1:
-        #     if re.search(semicolon,lineInElse[8]):
-        #       setLineSkip()
-        #   if re.search("END",lineInElse):
-        #     setLineSkip()
-      elif call_fct_:
-        sthen=createCall(routine,lineIf,filestring,robCnt,s.ThenScope,program)
+      createJMP(lineIf,routine,s.ThenScope)
+      if call_fct_:
+        sthen=createCall(lineIf,routine, s.ThenScope, program)
         s.ThenScope.Statements.append(sthen)
         break
   return s
@@ -461,7 +397,7 @@ def createLinear(line,robCnt,routine,filestring,scope,program):
     readPos(s,line,robCnt,filestring)
   return s
   
-def createSetDO(routine,line,filestring,robCnt,program,scope):
+def createSetDO(line,routine,scope):
 
   s = addStatement(scope, routine, VC_STATEMENT_SETBIN)
   PortValue=re.search("DO"+obracket+"(?P<Nr>[a-zA-Z0-9_]+)"+ '(?P<comment>(?:\s*:.*)?)'+cbracket+eq+"(?P<value>[a-zA-Z0-9_]+)",line)
@@ -477,7 +413,7 @@ def createSetDO(routine,line,filestring,robCnt,program,scope):
   
   return s  
   
-def createWaitDI(routine,line,filestring,robCnt,scope,program):
+def createWaitDI(line,routine,scope):
   port_value_=re.search("WAIT DI"+obracket+"(?P<Nr>[a-zA-Z0-9_]+)"+ '(?P<comment>(?:\s*:.*)?)'+cbracket+eq+"(?P<value>[a-zA-Z0-9_]+)",line)
 
   if port_value_:
@@ -504,13 +440,13 @@ def createWaitDI(routine,line,filestring,robCnt,scope,program):
     s=WAIT(scope,routine,var_,var_comment_,var_value_)
   return s	    
   
-def createComment(routine,line,filestring,robCnt,scope):
+def createComment(line,routine,scope):
   commentString=re.search("!(?P<comment>[a-zA-Z0-9_\-\s\:]+)",line)
   s = addStatement(scope, routine, VC_STATEMENT_COMMENT)
   s.Comment=commentString.group('comment')
   return s
 
-def createCall(routine,line,filestring,robCnt,scope,program):  
+def createCall(line,routine,scope,program):
   param1_=None
   param2_=None
   exec_ = routine.Program.Executor
@@ -598,22 +534,30 @@ def readSpeed(line,s):
       s.MaxSpeed=int(speed.group('speed'))
 
 
-def JMP(scope,routine_,nr_):
-  exec_ = routine_.Program.Executor
-  rob_cnt_=exec_.Controller
-  kin_=rob_cnt_.Kinematics
-  comp_=kin_.Component
-  s=addStatement(scope,routine_,'Process')
+def createJMP(line,routine_,scope):
+  JmpLblGroup = re.search("JMP (?P<JmpLbl>[a-zA-Z0-9\[\]\:_]+)", line)
+  if JmpLblGroup:
+    JmpLbl = JmpLblGroup.group('JmpLbl')
+    JmpLblNrGroup = re.search("LBL" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)", JmpLbl)
+    nr_ = JmpLblNrGroup.group('Nr')
 
-  #create Processhandler
-  ph_ = comp_.createBehaviour('rPythonProcessHandler', 'JMPProcessHandler')
-  ph_.Script = JMP_GET_PROCESS_HANDLER_SCRIPT()
-  s.Process = ph_
-  s.createProperty(VC_INTEGER, "LabelNr")
-  s.getProperty("LabelNr").Value = int(nr_)
+    exec_ = routine_.Program.Executor
+    rob_cnt_=exec_.Controller
+    kin_=rob_cnt_.Kinematics
+    comp_=kin_.Component
+    s=addStatement(scope,routine_,'Process')
 
-  s.Name = "JMP"+str(s.getProperty("LabelNr").Value)
-  return s
+    #create Processhandler
+    ph_ = comp_.createBehaviour('rPythonProcessHandler', 'JMPProcessHandler')
+    ph_.Script = JMP_GET_PROCESS_HANDLER_SCRIPT()
+    s.Process = ph_
+    s.createProperty(VC_INTEGER, "LabelNr")
+    s.getProperty("LabelNr").Value = int(nr_)
+
+    s.Name = "JMP"+str(s.getProperty("LabelNr").Value)
+    return s
+  else:
+    return None
 
 def WAIT(scope_,routine_,var_,var_comment_,var_value_,):
   exec_ = routine_.Program.Executor
@@ -635,7 +579,7 @@ def WAIT(scope_,routine_,var_,var_comment_,var_value_,):
   s.Name = "WAIT"
   return s
 
-def createLBL(routine_,scope_,line_):
+def createLBL(line_,routine_,scope_):
   exec_ = routine_.Program.Executor
   rob_cnt_ = exec_.Controller
   kin_ = rob_cnt_.Kinematics
@@ -652,6 +596,10 @@ def createLBL(routine_,scope_,line_):
   s.getProperty("LabelNr").Value = int(nr_)
 
   s.Name = "LBL"+str(s.getProperty("LabelNr").Value)
+  return s
+
+def createReturn(routine_,scope_):
+  s=addStatement(scope_,routine_,VC_STATEMENT_RETURN)
   return s
 
 def makeConodition(line,if_sel_):
@@ -728,7 +676,6 @@ def makeConodition(line,if_sel_):
         cond_nr_ = conddef.group('cond')
         cond = 'UI[' + cond_nr_ + ":" + comment_ + ']'
       elif re.search("O", line[len(cond_all_) + char_skip+1]):
-        print "hii"
         conddef = re.search(
             "UO" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\s]+)" + cbracket,
             line[len(cond_all_) + char_skip:])
@@ -787,6 +734,9 @@ def makeConodition(line,if_sel_):
     elif re.findall('RI' + obracket, cond):
       comment_=uploadva.delSpace(comment_)
       cond = "RobotInput::" + 'RI' + cond_nr_ + comment_
+    elif re.findall('UO' + obracket, cond):
+      comment_=uploadva.delSpace(comment_)
+      cond = "UserOutput::" + 'UO' + cond_nr_ + comment_
     elif re.findall('UI' + obracket, cond):
       comment_=uploadva.delSpace(comment_)
       cond = "UserInput::" + 'UI' + cond_nr_ + comment_
@@ -804,178 +754,6 @@ def makeConodition(line,if_sel_):
     cond_all_conv_ += cond
   return cond_all_conv_
 
-  # def makeConodition(line, if_sel_):
-  #   cond_all_ = ''
-  #   cond_all_conv_ = ''
-  #   cond = ''
-  #   char_skip = 0
-  #   if if_sel_ == 'IF':
-  #     char_skip = 10
-  #   elif if_sel_ == 'SELECT':
-  #     char_skip = 14
-  #   print "char_skip:%s" % char_skip
-  #   while re.search("!", line[len(cond_all_) + 10]) or re.search(orbracket, line[(len(cond_all_) + 10)]) or re.search(
-  #           "D", line[len(cond_all_) + 10]) or re.search(
-  #           eq, line[len(cond_all_) + 10]) or re.search("O",
-  #                                                       line[len(cond_all_) + 10:len(cond_all_) + 11]) or re.search(
-  #     crbracket, line[len(cond_all_) + 10]) or re.search("A", line[len(cond_all_) + 10]) or re.search("O", line[
-  #     len(cond_all_) + 10]) or line[len(cond_all_) + 10].isspace() or re.search("R",
-  #                                                                               line[len(cond_all_) + 10]) or re.search(
-  #     ginteger, line[len(cond_all_) + 10]) or re.search("F", line[
-  #     len(cond_all_) + 10]) or re.search("U", line[len(cond_all_) + 10]):  # re.search(sp,line[len(cond_all_)+10])  :
-  #
-  #     if re.search(orbracket, line[len(cond_all_) + 10]):
-  #       cond = '('
-  #     elif re.search("!", line[len(cond_all_) + 10]):
-  #       cond = '!'
-  #     elif re.search("D", line[len(cond_all_) + 10]):
-  #       # re.search("DI"+obracket+"(?P<cond>[a-zA-Z0-9_]+)"+cbracket,line[len(cond_all_)+10:len(cond_all_)+15]):
-  #       conddef = re.search(
-  #         "DI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\s]+)" + cbracket,
-  #         line[len(cond_all_) + 10:])
-  #       if conddef:
-  #         comment_ = conddef.group('comment')
-  #         # print "comment:%s" % comment_
-  #       else:
-  #         conddef = re.search("DI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + cbracket,
-  #                             line[len(cond_all_) + 10:])
-  #         comment_ = ""
-  #       cond_nr_ = conddef.group('cond')
-  #       cond = 'DI[' + cond_nr_ + ':' + comment_ + ']'
-  #       # cond='DI['+cond_nr_+':'+comment_+']'
-  #     elif re.search("R",
-  #                    line[len(cond_all_) + 10]):
-  #       if re.search("I", line[len(cond_all_) + 11]):
-  #         # print "hii"
-  #         conddef = re.search(
-  #           "RI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\s]+)" + cbracket,
-  #           line[len(cond_all_) + 10:])
-  #         if conddef:
-  #           comment_ = conddef.group('comment')
-  #           # print "comment:%s" % comment_
-  #         else:
-  #           conddef = re.search("RI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + cbracket,
-  #                               line[len(cond_all_) + 10:])
-  #           comment_ = ""
-  #         cond_nr_ = conddef.group('cond')
-  #         # comment = conddef.group('comment')
-  #         cond = 'RI[' + cond_nr_ + ":" + comment_ + ']'
-  #
-  #     elif re.search("U",
-  #                    line[len(cond_all_) + 10]):
-  #       if re.search("I", line[len(cond_all_) + 11]):
-  #         print "hii"
-  #         conddef = re.search(
-  #           "UI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\s]+)" + cbracket,
-  #           line[len(cond_all_) + 10:])
-  #         if conddef:
-  #           comment_ = conddef.group('comment')
-  #           # print "comment:%s" % comment_
-  #         else:
-  #           conddef = re.search("UI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + cbracket,
-  #                               line[len(cond_all_) + 10:])
-  #           comment_ = ""
-  #         cond_nr_ = conddef.group('cond')
-  #         # comment = conddef.group('comment')
-  #         cond = 'UI[' + cond_nr_ + ":" + comment_ + ']'
-  #       elif re.search("O", line[len(cond_all_) + 11]):
-  #         print "hii"
-  #         conddef = re.search(
-  #           "UO" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\s]+)" + cbracket,
-  #           line[len(cond_all_) + 10:])
-  #         if conddef:
-  #           comment_ = conddef.group('comment')
-  #           # print "comment:%s" % comment_
-  #         else:
-  #           conddef = re.search("UO" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + cbracket,
-  #                               line[len(cond_all_) + 10:])
-  #           comment_ = ""
-  #         cond_nr_ = conddef.group('cond')
-  #         # comment = conddef.group('comment')
-  #         cond = 'UO[' + cond_nr_ + ":" + comment_ + ']'
-  #
-  #     elif re.search("F", line[len(cond_all_) + 10]):
-  #       conddef = re.search(
-  #         "F" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\s]+)" + cbracket,
-  #         line[len(cond_all_) + 10:])
-  #       if conddef:
-  #         comment_ = conddef.group('comment')
-  #         # print "comment:%s" % comment_
-  #       else:
-  #         conddef = re.search("F" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + cbracket,
-  #                             line[len(cond_all_) + 10:])
-  #         comment_ = ""
-  #       cond_nr_ = conddef.group('cond')
-  #       # comment = conddef.group('comment')
-  #       cond = 'F[' + cond_nr_ + ":" + comment_ + ']'
-  #     elif re.search("A", line[len(cond_all_) + 10]):
-  #       cond = 'AND'
-  #     elif line[len(cond_all_) + 10].isspace():
-  #       cond = " "
-  #     elif re.search(eq, line[len(cond_all_) + 10]):
-  #       cond = '='
-  #     elif re.search("O", line[len(cond_all_) + 10]):
-  #       if re.search("N", line[len(cond_all_) + 11]):
-  #         cond = 'ON'
-  #       elif re.search("R", line[len(cond_all_) + 11]):
-  #         cond = 'OR'
-  #       elif re.search("F", line[len(cond_all_) + 11]):
-  #         cond = 'OFF'
-  #     elif re.search(crbracket, line[len(cond_all_) + 10]):
-  #       cond = ')'
-  #     elif re.search(ginteger, line[len(cond_all_) + 10]):
-  #       const_def_ = re.search(ginteger, line[len(cond_all_) + 10:])
-  #       const_ = const_def_.group(1)
-  #       cond = const_
-  #     cond_all_ += cond
-  #     # print "cond_all:%s" %cond_all_
-  #     if re.findall('DI', cond):
-  #       cond = 'IN[' + cond_nr_ + ']'
-  #     elif cond == "ON":
-  #       cond = '1'
-  #     elif re.findall('R' + obracket, cond):
-  #       cond = "Registers::" + 'R' + cond_nr_ + comment_
-  #     elif re.findall('RI' + obracket, cond):
-  #       p = re.compile(r' ')
-  #       comment_split_ = p.split(comment_)
-  #       if comment_split_:
-  #         i = 1
-  #         comment_ = ''
-  #         while i <= len(comment_split_):
-  #           comment_ += comment_split_[i - 1]
-  #           i = i + 1
-  #       cond = "RobotInput::" + 'RI' + cond_nr_ + comment_
-  #     elif re.findall('UI' + obracket, cond):
-  #       p = re.compile(r' ')
-  #       comment_split_ = p.split(comment_)
-  #       if comment_split_:
-  #         i = 1
-  #         comment_ = ''
-  #         while i <= len(comment_split_):
-  #           comment_ += comment_split_[i - 1]
-  #           i = i + 1
-  #       cond = "UserInput::" + 'UI' + cond_nr_ + comment_
-  #     elif re.findall('F' + obracket, cond):
-  #       p = re.compile(r' ')
-  #       comment_split_ = p.split(comment_)
-  #       if comment_split_:
-  #         i = 1
-  #         comment_ = ''
-  #         while i <= len(comment_split_):
-  #           comment_ += comment_split_[i - 1]
-  #           i = i + 1
-  #       cond = "Flags::" + 'FLG' + cond_nr_ + comment_
-  #     elif cond == "OFF":
-  #       cond = '0'
-  #     elif cond == "=":
-  #       cond = '=='
-  #     elif cond == "AND":
-  #       cond = '&&'
-  #     elif cond == "OR":
-  #       cond = '||'
-  #     cond_all_conv_ += cond
-  #   return cond_all_conv_
-  #statement_.Condition=cond_all_conv_
 def addStatement(scope_,routine_,vc_type_):
   if scope_:
     if scope_.ParentStatement.Type == VC_STATEMENT_IF or scope_.ParentStatement.Type == VC_STATEMENT_WHILE:

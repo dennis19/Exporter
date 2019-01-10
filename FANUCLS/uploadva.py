@@ -226,10 +226,6 @@ def uploadva_(program, infile):
       except:
         pass
       posFrame.Name = name_
-      # if comment:
-      # posFrame.Name = comment
-      # else:
-      # posFrame.Name = routine.Name + '_%i' % pindex
 
       # endif
       stmt.createProperty(VC_INTEGER, 'INDEX')
