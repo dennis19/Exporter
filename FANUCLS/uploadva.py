@@ -148,6 +148,7 @@ def uploadva_(program, infile):
   if toolString:
     tools = re_frame.finditer(toolString)
     for t in tools:
+      print "hii"
       tindex = eval(t.group(2))
       xx = eval(t.group('x'))
       yy = eval(t.group('y'))
@@ -159,7 +160,6 @@ def uploadva_(program, infile):
       m = vcMatrix.new()
       m.translateAbs(xx, yy, zz)
       m.setWPR(ww, pp, rr)
-
       if tindex > len(robCnt.Tools):
         tool = robCnt.addTool()
         tool.Name = 'Utool%i' % tindex

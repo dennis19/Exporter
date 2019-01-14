@@ -182,7 +182,7 @@ def OnStart():
 
   upload_programs(program_,infile)
   return True
-
+#function parameter structure to follow: line,robCnt,routine,program,filestring,scope!
 def createStatement(line,robCnt,routine,program,filestring,scope):
   global depth
   depth=depth+1
@@ -250,7 +250,7 @@ def readPos(s,line,robCnt,filestring):
   #read in speed and coordinates
   if posname:
     targetname= "P["+posname.group('pnum')+"]"
-    readSpeed(line,s)          
+    readSpeed(line,s)
 
     for lineFindPos in filestring.split('\n'):
       FindPosMatch=re.findall('P'+obracket+posname.group('pnum')+cbracket+obrace,lineFindPos)
@@ -277,6 +277,7 @@ def readPos(s,line,robCnt,filestring):
             idw=setCoordinates(w,'w',lineFindCoord)	
           if cfgData=="":
             cfgData=setConfiguration(lineFindCoord)
+
           if tool == 0:
             tool=readTool(lineFindCoord)
           if base==0:
@@ -313,7 +314,9 @@ def readBase(line):
   if baseMatch:
     baseDef= int(baseMatch.group('uf'))
   return baseDef	
-    	  
+
+def readToolOffset():
+  print "line: %s" % line
 		  
 def setConfiguration(line):
   cfgMatch = re.search(cfg,line)
@@ -388,6 +391,8 @@ def createPTP(line,robCnt,routine,filestring,scope,program):
   
 def createLinear(line,robCnt,routine,filestring,scope,program):
   posr_name_= re.search(prnum,line)
+  if re.findall("Tool_Offset,", line):
+    readToolOffset()
   if posr_name_:
     callRoutine = program.findRoutine("POSREG_PR[" + posr_name_.group('pnum') + posr_name_.group('comment') + "]")
     s = addStatement(scope, routine, VC_STATEMENT_CALL)
