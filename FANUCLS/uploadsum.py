@@ -94,7 +94,7 @@ def uploadsum_(program,infile):
         val = 1
       elif val == 'OFF':
         val = 0
-      comment=uploadva.delSpace(ROREG_.group('comment'))
+      comment=uploadva.delChars(ROREG_.group('comment'))
       if val or comment:
         nindex = eval(ROREG_.group(1))
         prop = comp.createProperty(VC_REAL, 'RobotOutput::RO%i' % nindex + '%s' % comment)
@@ -109,7 +109,7 @@ def uploadsum_(program,infile):
         val = 1
       elif val == 'OFF':
         val = 0
-      comment=uploadva.delSpace(RIREG_.group('comment'))
+      comment=uploadva.delChars(RIREG_.group('comment'))
       if val or comment:
         nindex = eval(RIREG_.group(1))
         prop = comp.createProperty(VC_REAL, 'RobotInput::RI%i' % nindex + '%s' % comment)
@@ -124,7 +124,7 @@ def uploadsum_(program,infile):
         val = 1
       elif val == 'OFF':
         val = 0
-      comment=uploadva.delSpace(UOREG_.group('comment'))
+      comment=uploadva.delChars(UOREG_.group('comment'))
       if val or comment:
         nindex = eval(UOREG_.group(1))
         prop = comp.createProperty(VC_REAL, 'UserOutput::UO%i' % nindex + '%s' % comment)
@@ -139,7 +139,7 @@ def uploadsum_(program,infile):
         val = 1
       elif val == 'OFF':
         val = 0
-      comment=uploadva.delSpace(UIREG_.group('comment'))
+      comment=uploadva.delChars(UIREG_.group('comment'))
       if val or comment:
         nindex = eval(UIREG_.group(1))
         prop = comp.createProperty(VC_REAL, 'UserInput::UI%i' % nindex + '%s' % comment)
@@ -155,10 +155,10 @@ def uploadsum_(program,infile):
         val = 1
       elif val == 'OFF':
         val = 0
-      comment = uploadva.delSpace(FLGREG_.group('comment'))
+      comment = uploadva.delChars(FLGREG_.group('comment'))
       if val or comment:
         nindex = eval(FLGREG_.group(1))
-        prop = comp.createProperty(VC_REAL, 'Flags::FLG%i' % nindex + '%s' % comment)
+        prop = comp.createProperty(VC_REAL, 'Flags::F%i' % nindex + '%s' % comment)
         prop.Value = val
         prop.Group = nindex
       continue
