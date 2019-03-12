@@ -86,6 +86,16 @@ def OnStart():
     return
     # endtry
 
+  main_file_ = glob.glob(filename_[0:len(filename_) - file_length_] + "PNS0001.ls")
+  print "%s" %main_file_
+  #try:
+  infile_main_ = open(main_file_[0], "r")
+  upload.upload_programs(program_, infile_main_,filename_)
+  #except:
+  #print "Cannot open file \'%s\' for reading" % main_file_
+  #  return
+    # endtry
+
   return True
 
 #-------------------------------------------------------------------------------

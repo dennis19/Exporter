@@ -5,6 +5,7 @@ import vcMatrix
 import uploadva
 import uploadBackup
 import IntermediateUpload
+import glob
 sp = r'\s+'
 eq = r'\s*=\s*'
 comma = r'\s*,\s*'
@@ -22,6 +23,8 @@ real = r'-?\d*\.?\d+(?:[eE][-+]?\d+)?'
 greal = r'('+real+')'
 alphanum = r'[a-zA-Z]+\w*'
 galphanum = r'('+alphanum+')'
+
+
 
 nl = r' *\r?[\n\0]'
 sl = r'\A|\n'
@@ -94,9 +97,10 @@ def addScript(comp_):
     script_.Script = lsScript()
   return
 
-def upload_programs(program_,infile):
+def upload_programs(program_,infile,filename_):
   # initialization
   ###
+  routine_nr_=0
   global lineskip_, depth
   depth=0
   lineskip_ = [0, 0, 0, 0, 0, 0, 0, 0, 0,0,0,0,0,0,0,0,0,0,0]
@@ -105,13 +109,13 @@ def upload_programs(program_,infile):
   scope_ = None
   inst_flag_ = False
   instructions_ = ''
-
   executor_ = program_.Executor
 
   filestring_ = infile.read()
   infile.close()
-
+  file_length_ = len(os.path.basename(filename_))
   rob_cnt_ = executor_.Controller
+
 
   # read in lines of file
   for line_ in filestring_.split('\n'):
@@ -128,7 +132,109 @@ def upload_programs(program_,infile):
         routine_ = program_.findRoutine(progname_)
         if not routine_:
           routine_ = program_.addRoutine(progname_)
-      routine_.clear()
+      if len(routine_.Statements)>=3:
+        routine_.clear()
+      ###continue
+    # endif
+
+    # read from main till position
+    mn_ = re.match(r'/MN' + end, line_)
+    if mn_:
+      inst_flag_ = True
+      ###continue
+    # endif
+
+    pos_ = re.match(r'/POS' + end, line_)
+    if pos_:
+      break
+    # endif
+    # create statements, if if then skip lines
+    if inst_flag_:
+      if lineskip_[depth] != 0:
+        lineskip_[depth] = lineskip_[depth] - 1
+        continue
+      else:
+        createStatement(line_, rob_cnt_, routine_, program_, filestring_, scope_);
+    # endif
+    instructions_ += line_ + '\n'
+  # endfor
+  routine_instructions_=''
+  for routine in routine_.Program.Routines:
+    print "routine %s" %routine.Name
+    if not routine.Name== "PNS0001" and not routine== routine_:
+      print "Reading routine %s" %routine.Name
+      routine_file_ = glob.glob(filename_[0:len(filename_) - file_length_] + routine.Name+".ls" )
+      if routine_file_:
+        if len(routine.Statements)<3:
+          routine_file_main_ = open(routine_file_[0], "r")
+          upload_programs(program_, routine_file_main_, filename_)
+      #   # endif
+        routine_instructions_ += line_ + '\n'
+      else:
+        print " \'%s\' is not a program file" % routine.Name
+  routine_nr_=routine_nr_+1
+
+
+  return True
+
+
+def OnStart():
+  program_ = uploadBackup.getActiveProgram()
+  if not program_:
+    app_.messageBox("No program selected, aborting.","Warning",VC_MESSAGE_TYPE_WARNING,VC_MESSAGE_BUTTONS_OK)
+    return
+  #endif
+  routine_nr_=0
+  global lineskip_, depth
+  depth=0
+  lineskip_ = [0, 0, 0, 0, 0, 0, 0, 0, 0,0,0,0,0,0,0,0,0,0,0]
+  lineskip_[depth] = 0
+
+  scope_ = None
+  inst_flag_ = False
+  instructions_ = ''
+  executor_ = program_.Executor
+  #file_length_ = len(os.path.basename(filename_))
+  rob_cnt_ = executor_.Controller
+
+  ok_=True
+  #read in .ls files in backup folder
+  opencmd_ = app_.findCommand("dialogOpen")
+  uri_ = ""
+  file_filter_ = "FANUC Robot Program files (*.ls)|*.ls"
+  opencmd_.execute(uri_,ok_,file_filter_)
+  if not opencmd_.Param_2:
+    print "No file selected for uploading, aborting command"
+    return
+  #endif
+  uri_ = opencmd_.Param_1
+  filename_ = uri_[8:len(uri_)]
+  print "%s" % uri_
+  try:
+    infile = open(filename_,"r")
+  except:
+    print "Cannot open file \'%s\' for reading" % filename_
+    return
+  filestring_ = infile.read()
+  infile.close()
+  #endtry
+
+  for line_ in filestring_.split('\n'):
+
+    prog_ = re.match(r'/PROG' + sp + galphanum + '(?:\s+Macro)?' + end, line_)
+    # create routine for file, if not there yet
+    if prog_:
+      progname_ = prog_.group(1)
+      print "Prog:%s" % progname_
+      program_.deleteRoutine(progname_)
+      if progname_ == 'PNS0001':
+        routine_ = program_.MainRoutine
+      else:
+        routine_ = program_.findRoutine(progname_)
+        if not routine_:
+          routine_ = program_.addRoutine(progname_)
+      if len(routine_.Statements)>=3:
+        routine_.clear()
       ###continue
     # endif
 
@@ -154,42 +260,17 @@ def upload_programs(program_,infile):
     instructions_ += line_ + '\n'
   # endfor
 
-  return True
-
-
-def OnStart():
-  program_ = uploadBackup.getActiveProgram()
-  if not program_:
-    app_.messageBox("No program selected, aborting.","Warning",VC_MESSAGE_TYPE_WARNING,VC_MESSAGE_BUTTONS_OK)
-    return
-  #endif
-
-  ok_=True
-  #read in .ls files in backup folder
-  opencmd_ = app_.findCommand("dialogOpen")
-  uri_ = ""
-  file_filter_ = "FANUC Robot Program files (*.ls)|*.ls"
-  opencmd_.execute(uri_,ok_,file_filter_)
-  if not opencmd_.Param_2:
-    print "No file selected for uploading, aborting command"
-    return
-  #endif
-  uri_ = opencmd_.Param_1
-  filename_ = uri_[8:len(uri_)]
-  try:
-    infile = open(filename_,"r")
-  except:
-    print "Cannot open file \'%s\' for reading" % filename_
-    return
-  #endtry
-
-  upload_programs(program_,infile)
+  #upload_programs(program_,infile,filename_)
   return True
 #function parameter structure to follow: line,robCnt,routine,program,filestring,scope!
 def createStatement(line,robCnt,routine,program,filestring,scope):
   global depth
   depth=depth+1
-  if re.findall(":J ",line):
+  if re.findall("  !",line):
+    s=createComment(line,routine,scope)
+    depth = depth - 1
+    return s
+  elif re.findall(":J ",line):
     s=createPTP(line,robCnt,routine,filestring,scope,program)#+
     depth = depth - 1
     return s
@@ -205,6 +286,10 @@ def createStatement(line,robCnt,routine,program,filestring,scope):
     s=createSetDO(line,routine,scope)#+
     depth = depth - 1
     return s
+  elif re.findall("WAIT   "+"(?P<value>[\s.a-zA-Z0-9_]+)",line):
+    s=createDelay(line,routine,scope)
+    depth = depth - 1
+    return s
   elif re.findall("WAIT ",line):
     s=createWaitDI(line,routine,scope)#+
     depth = depth - 1
@@ -215,10 +300,6 @@ def createStatement(line,robCnt,routine,program,filestring,scope):
     return s
   elif re.findall("CALL",line):
     s=createCall(line,routine,scope,program)
-    depth = depth - 1
-    return s
-  elif re.findall(" !(?P<Nr>[a-zA-Z0-9_/-]+)",line):
-    s=createComment(line,routine,scope)
     depth = depth - 1
     return s
   elif re.findall("LBL",line)and not re.findall('JMP',line):
@@ -233,18 +314,35 @@ def createStatement(line,robCnt,routine,program,filestring,scope):
     s=createReturn(routine,scope)
     depth = depth - 1
     return s
+  elif re.findall("MESSAGE",line):
+    s=createMessage(line,routine,scope)
+    depth = depth - 1
+    return s
   elif re.findall('UTOOL',line):
     setGlobTool(line)
+    depth = depth - 1
+  elif re.findall(r"(?P<var_type>[a-zA-Z/!]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket+eq,line):
+    s= createAssignStatement(line,routine,scope)
+    depth = depth - 1
+    return s
   else:
     depth = depth - 1
 #endfct
 
+def createMessage(line,routine,scope):
+  s=addStatement(scope,routine,VC_STATEMENT_PRINT)
+  s.Message=IntermediateUpload.getMessage(line)
+
+  return s
+
 def setGlobTool(line):
   global glob_tool_
-  tool_def_=re.search("UTOOL_NUM"+eq+"(?P<Nr>[0-9_]+)")
+  tool_def_=re.search("UTOOL_NUM"+eq+"(?P<Nr>[0-9_]+)",line)
   glob_tool_=tool_def_.group('Nr')
+
 #find PosName
 def readPos(s,line,robCnt,filestring,type,program):
+  global glob_tool_
   exec_ = program.Executor
   rob_cnt_ = exec_.Controller
   kin_ = rob_cnt_.Kinematics
@@ -256,14 +354,16 @@ def readPos(s,line,robCnt,filestring,type,program):
       s.JointSpeed = int(move_data_[1][0])/100
     else:
       if comp_.getProperty("R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])):
-        pass
+        s.JointSpeed = int(comp_.getProperty("R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])).Value) / 100
 
   elif type=="lin":
+
     if move_data_[1][1]=="":
       s.MaxSpeed = int(move_data_[1][0])
     else:
-      if comp_.getProperty("R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])):
-        pass
+
+      if comp_.getProperty("Registers::R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])):
+        s.MaxSpeed = int(comp_.getProperty("Registers::R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])).Value)
 
 
   m = vcMatrix.new()
@@ -299,17 +399,20 @@ def readBase(line):
   return baseDef	
 
 def readToolOffset(line,program,routine_,scope_):
+
   if re.findall(",PR",line):
+
     pos_reg_off_def_=re.search(","+prnum,line)
     if pos_reg_off_def_:
       callRoutine = program.findRoutine("POSREG_PR[" + pos_reg_off_def_.group('pnum') + pos_reg_off_def_.group('comment') + "]" )
-      print "POSREG_PR[" + pos_reg_off_def_.group('pnum') + pos_reg_off_def_.group('comment') + "]"
-      print "%s" %callRoutine
+
       if callRoutine:
+        offset_vec_vc_=vcMatrix.new()
         offset_statement_=callRoutine.Statements[0]
         offset_vec_=offset_statement_.Positions[0].PositionInReference.P
-        offset_wpr_ = offset_statement_.Positions[0].PositionInReference.WPR
-        print "offset_vec_: %s" % offset_vec_.X
+        offset_vec_vc_.translateAbs(-offset_vec_.Z,-offset_vec_.X,offset_vec_.Y)
+        offset_vec_vc_.WPR=offset_statement_.Positions[0].PositionInReference.WPR
+
     pos_def_ = re.search(prnum, line)
     if pos_def_:
       callRoutine = program.findRoutine(
@@ -317,12 +420,13 @@ def readToolOffset(line,program,routine_,scope_):
 
       if callRoutine:
         pos_statement_ = callRoutine.Statements[0]
+        pos_=vcMatrix.new()
         pos_vec_ = pos_statement_.Positions[0].PositionInReference.P
         pos_wpr_ = pos_statement_.Positions[0].PositionInReference.WPR
-        print "pos_vec_: %s" % pos_vec_.X
-    new_pos_vec=offset_vec_+pos_vec_
-    new_pos_wpr=offset_wpr_+pos_wpr_
-    print "new_pos_vec: %s" % new_pos_vec.X
+        pos_.translateAbs(pos_vec_.X,pos_vec_.Y,pos_vec_.Z)
+        pos_.WPR=pos_wpr_
+        pos_.translateRel(offset_vec_.X,offset_vec_.Y,offset_vec_.Z)
+
     exec_ = program.Executor
     rob_cnt_ = exec_.Controller
     kin_ = rob_cnt_.Kinematics
@@ -336,16 +440,13 @@ def readToolOffset(line,program,routine_,scope_):
     s.Process = ph_
     s.Name = 'ToolOffset'
     s.Base=pos_statement_.Base
-    s.Tool = pos_statement_.Tool
-    m = vcMatrix.new()
-    m.translateAbs(new_pos_vec.X, new_pos_vec.Y, new_pos_vec.Z)
-    m.setWPR(new_pos_wpr.X, new_pos_wpr.Y, new_pos_wpr.Z)
-    pos.PositionInReference = m
-    # s.createProperty(VC_STRING, "Variable")
-    # s.createProperty(VC_INTEGER, "Value")
-    # s.getProperty("Variable").Value = var_
-    # s.getProperty("Value").Value = int(var_value_)
-    #   callRoutine = program.addRoutine( call_data[0] )
+    if not glob_tool_ == 0:
+      s.Tool = rob_cnt_.Tools[int(glob_tool_)-1].Name
+    else:
+      s.Tool = pos_statement_.Tool
+    print "tool mat %s" %s.Tool.PositionMatrix.getWPR().X
+
+    pos.PositionInReference = pos_
     return s
 
 		  
@@ -382,14 +483,10 @@ def createSELECT(line,robCnt,routine,filestring,scope,program):
       jmp_fct_ = re.search(",JMP", line_select_)
       if call_fct_:
         sthen = createCall(line_select_,routine, s.ThenScope, program)
-        #sthen = createJMP(line_select_,routine,s.ThenScope)
         s.ThenScope.Statements.append(sthen)
-        #createJMP(line_select_,routine,s.ThenScope)
       elif jmp_fct_:
-        #sthen = createCall(line_select_,routine, s.ThenScope, program)
         sthen = createJMP(line_select_,routine,s.ThenScope)
         s.ThenScope.Statements.append(sthen)
-        #createJMP(line_select_,routine,s.ThenScope)
       s.Condition = makeConodition(line, 'SELECT')+select_choices_.group("Nr")
       if in_select_==1:
         setLineSkip()
@@ -414,6 +511,9 @@ def createIF(line,routine,filestring,scope,program):
         sthen=createCall(lineIf,routine, s.ThenScope, program)
         s.ThenScope.Statements.append(sthen)
         break
+      elif re.findall(comma+r"(?P<var_type1>[a-zA-Z/!]+)" + obracket + "(?P<Nr1>[a-zA-Z0-9_]+)" + '(?P<comment1>(?:\s*:.*)?)' + cbracket + eq,line):
+        sthen=createAssignStatement(line,routine,s.ThenScope)
+        s.ThenScope.Statements.append(sthen)
   return s
 
 def createPTP(line,robCnt,routine,filestring,scope,program):
@@ -453,7 +553,16 @@ def createSetDO(line,routine,scope):
     s.OutputValue=0
   
   return s  
-  
+
+def createDelay(line, routine, scope):
+  wait_data = IntermediateUpload.getWait(line)
+
+  s=addStatement(scope, routine, VC_STATEMENT_DELAY)
+
+  s.Delay= float(wait_data[2][0])
+
+  return s
+
 def createWaitDI(line,routine,scope):
   #print"%s" %line
   wait_data=IntermediateUpload.getWait(line)
@@ -468,9 +577,9 @@ def createWaitDI(line,routine,scope):
       s.InputValue=0
   else:
     i =0
-    var_=["","",""]
-    var_value_=["","",""]
-    var_comment_=["","",""]
+    var_=["","","",""]
+    var_value_=["","","",""]
+    var_comment_=["","","",""]
     while i<=len(wait_data[0])-1:
       #print "%s" %wait_data[0][i]
       if wait_data[0][i]=="F":
@@ -482,13 +591,12 @@ def createWaitDI(line,routine,scope):
       var_value_[i]=wait_data[2][i]
       var_comment_[i]=uploadva.delChars(wait_data[3][i])
       if wait_data[0][i] == "IN":
-        # var_[i] = wait_data[0][i] +'['+wait_data[1][i] + ']'
         var_[i] = wait_data[1][i]
       else:
         var_[i] = wait_data[0][i]  + wait_data[1][i] + var_comment_[i]
       if var_value_[i]=='ON':
         var_value_[i]=1
-      elif var_value_[i]=='OFF':
+      elif var_value_[i]=='OFF' or var_value_[i]=="":
         var_value_[i]=0
       i=i+1
     s=WAIT(scope,routine,var_,var_comment_,var_value_)
@@ -520,14 +628,12 @@ def createCall(line,routine,scope,program):
     if not callRoutine:
       callRoutine = program.addRoutine( call_data[0] )
       print "Routine %s created" %callRoutine.Name
-    #callRoutine.clear()
     if call_data[1]:
       i=0
       s.createProperty(VC_INTEGER, 'Parameter_1')
       s.getProperty('Parameter_1').Value = int(call_data[1])
       if not callRoutine.getProperty('Parameter_1'):
         callRoutine.createProperty(VC_INTEGER, 'Parameter_1')
-      #print "%s" %len(callRoutine.Statements)
       if len(callRoutine.Statements)==0:
         createAssign(callRoutine, scope, callRoutine.getProperty('Parameter_1').Name, call_data[2])
       else:
@@ -549,7 +655,6 @@ def createCall(line,routine,scope,program):
         createAssign(callRoutine, scope, callRoutine.getProperty('Parameter_2').Name, call_data[2])
       else:
         while callRoutine.Statements[i]:
-          #print "%s" %propertyCounter
           if callRoutine.Statements[i].Type == VC_STATEMENT_SETPROPERTY:
             propertyCounter += 1
           if i==len(callRoutine.Statements)-1:
@@ -565,79 +670,9 @@ def createCall(line,routine,scope,program):
     if not callRoutine:
       callRoutine = program.addRoutine( call_data[0] )
       print "Routine %s created" % callRoutine.Name
-    #callRoutine.clear()
     s.Routine=callRoutine
 
-  # callDef = re.search(
-  #   "CALL (?P<routine>[a-zA-Z0-9_]+)" + orbracket + '(?P<param1>[a-zA-Z0-9_]+)' + comma + '(?P<param2>[a-zA-Z0-9_]+)' + crbracket,
-  #   line)
-  # if callDef:
-  #   s = addStatement(scope, routine, 'Process')
-  #   param1_ = callDef.group('param1')
-  #   param2_ = callDef.group('param2')
-  #
-  #   ph_ = comp_.createBehaviour('rPythonProcessHandler', 'ParamCallScript')
-  #   ph_.Script = CALL_PARAM_HANDLER_SCRIPT()
-  #   s.Process = ph_
-  #
-  #   s.createProperty(VC_STRING, 'Routine')
-  #   s.getProperty('Routine').Value = callDef.group('routine')
-  #
-  #   callRoutine = program.findRoutine( callDef.group('routine') )
-  #   if not callRoutine:
-  #     callRoutine = program.addRoutine( callDef.group('routine') )
-  #     print "Routine %s created" %callRoutine.Name
-  #
-  #   if param1_:
-  #     s.createProperty(VC_INTEGER, 'Parameter_1')
-  #     s.getProperty('Parameter_1').Value = int(param1_)
-  #     if not callRoutine.getProperty('Parameter_1'):
-  #       callRoutine.createProperty(VC_INTEGER, 'Parameter_1')
-  #   if param2_:
-  #     s.createProperty(VC_INTEGER, 'Parameter_2')
-  #     s.getProperty('Parameter_2').Value = int(param2_)
-  #
-  #     if not callRoutine.getProperty('Parameter_2'):
-  #       callRoutine.createProperty(VC_INTEGER, 'Parameter_2')
-  #   s.Name='CALL ' +s.getProperty('Routine').Value
-  # elif re.search(
-  #   "CALL (?P<routine>[a-zA-Z0-9_]+)" + orbracket + '(?P<param1>[a-zA-Z0-9_]+)' + crbracket,
-  #   line):
-  #   callDef=re.search(
-  #   "CALL (?P<routine>[a-zA-Z0-9_]+)" + orbracket + '(?P<param1>[a-zA-Z0-9_]+)' + crbracket,
-  #   line)
-  #   s = addStatement(scope, routine, 'Process')
-  #   param1_ = callDef.group('param1')
-  #
-  #   ph_ = comp_.createBehaviour('rPythonProcessHandler', 'ParamCallScript')
-  #   ph_.Script = CALL_PARAM_HANDLER_SCRIPT()
-  #   s.Process = ph_
-  #
-  #   s.createProperty(VC_STRING, 'Routine')
-  #   s.getProperty('Routine').Value = callDef.group('routine')
-  #
-  #   callRoutine = program.findRoutine( callDef.group('routine') )
-  #   if not callRoutine:
-  #     callRoutine = program.addRoutine( callDef.group('routine') )
-  #     print "Routine %s created" % callRoutine.Name
-  #   if param1_:
-  #     s.createProperty(VC_INTEGER, 'Parameter_1')
-  #     s.getProperty('Parameter_1').Value = int(param1_)
-  #     if not callRoutine.getProperty('Parameter_1'):
-  #       callRoutine.createProperty(VC_INTEGER, 'Parameter_1')
-  #
-  #   s.Name='CALL ' + s.getProperty('Routine').Value
-  # else:
-  #   callDef = re.search("CALL (?P<routine>[a-zA-Z0-9_]+)", line)
-  #   s = addStatement(scope, routine, VC_STATEMENT_CALL)
-  #
-  #   callRoutine = program.findRoutine( callDef.group('routine') )
-  #   if not callRoutine:
-  #     callRoutine = program.addRoutine( callDef.group('routine') )
-  #     print "Routine %s created" % callRoutine.Name
-  #   s.Routine=callRoutine
-  #
-  return s  
+  return s
   
 def readSpeed(line,s):
     if s.Type==VC_STATEMENT_PTPMOTION:
@@ -665,8 +700,8 @@ def createJMP(line,routine_,scope):
     ph_ = comp_.createBehaviour('rPythonProcessHandler', 'JMPProcessHandler')
     ph_.Script = JMP_GET_PROCESS_HANDLER_SCRIPT()
     s.Process = ph_
-    s.createProperty(VC_INTEGER, "LabelNr")
-    s.getProperty("LabelNr").Value = int(nr_)
+    s.createProperty(VC_STRING, "LabelNr")
+    s.getProperty("LabelNr").Value = nr_
 
     s.Name = "JMP"+str(s.getProperty("LabelNr").Value)
     return s
@@ -706,7 +741,6 @@ def createLBL(line_,routine_,scope_):
   nr_=nr_match_.group('Nr')
   # create Processhandler
   ph_ = comp_.createBehaviour('rPythonProcessHandler', 'LBLProcessHandler')
-  #ph_.Script = WAIT_GET_PROCESS_HANDLER_SCRIPT()
   s.Process = ph_
   s.createProperty(VC_INTEGER, "LabelNr")
   s.getProperty("LabelNr").Value = int(nr_)
@@ -717,15 +751,30 @@ def createLBL(line_,routine_,scope_):
 def createReturn(routine_,scope_):
   s=addStatement(scope_,routine_,VC_STATEMENT_RETURN)
   return s
+def createAssignStatement(line,routine,scope):
+  set_var_data_=IntermediateUpload.getSetVariable(line)
+  if not set_var_data_[0]=="":
+    s = addStatement(scope,routine,VC_STATEMENT_SETPROPERTY)
+
+    var_=set_var_data_[0]+set_var_data_[1]+uploadva.delChars(set_var_data_[2])
+    value_ = set_var_data_[3] + set_var_data_[4] + uploadva.delChars(set_var_data_[5])
+    if re.findall("ON",value_):
+      value_=1
+    elif re.findall("OFF",value_):
+      value_=0
+    elif value_=="AR1":
+      value_=routine.getProperty("Parameter_1").Name
+    elif value_ == "AR2":
+      value_ = routine.getProperty("Parameter_2").Name
+    s.TargetProperty = str(var_)
+    s.ValueExpression= str(value_)
+    return s
 
 def createAssign(routine_,scope_,var_,value_):
   i = 0
   s = routine_.addStatement(VC_STATEMENT_SETPROPERTY)
-  #print "%s" %s.Type
   if routine_.Statements[i].Type==VC_STATEMENT_SETPROPERTY:
-  #   print "%s" %routine_.Statements[i].Properties[0].Name
     s.TargetProperty=str(var_)
-  #s.ValueExpression=value_
   return s
 
 def makeConodition(line,if_sel_):
@@ -738,152 +787,10 @@ def makeConodition(line,if_sel_):
     char_skip=10
   elif if_sel_=='SELECT':
     char_skip=14
-  # while re.search("!", line[len(cond_all_) + char_skip]) or re.search(orbracket, line[(len(cond_all_) + char_skip)]) or re.search("D",line[len(cond_all_) + char_skip]) or re.search(
-  #         eq, line[len(cond_all_) + char_skip]) or re.search("O", line[len(cond_all_) + char_skip:len(cond_all_) + char_skip+1]) or re.search(
-  #         crbracket, line[len(cond_all_) + char_skip]) or re.search("A", line[len(cond_all_) + char_skip]) or re.search("O", line[
-  #   len(cond_all_) + char_skip]) or line[len(cond_all_) + char_skip].isspace() or re.search("R",
-  #                                                                             line[len(cond_all_) + char_skip]) or re.search(
-  #         ginteger, line[len(cond_all_) + char_skip]) or re.search("F", line[
-  #   len(cond_all_) + char_skip]) or re.search("U", line[len(cond_all_) + char_skip]):
-  while re.search(r"(?P<signs>[\(\)\!\s]+)", line[len(cond_all_) + char_skip]) or re.search(r"(?P<var_type>[a-zA-Z]+)" + obracket ,
+  while re.search(r"(?P<signs>[\(\)\!\s\,]+)", line[len(cond_all_) + char_skip]) or re.search(r"(?P<var_type>[a-zA-Z]+)" + obracket ,
                  line[len(cond_all_) + char_skip:len(cond_all_) + char_skip + 4]) or re.search(r"(?P<logic>[a-zA-Z]+)", line[len(cond_all_) + char_skip]):
     condition_=IntermediateUpload.getCondition(line,cond_all_,char_skip)
-    # if re.search(orbracket, line[len(cond_all_) + char_skip]):
-    #   cond = '('
-    # elif re.search("!", line[len(cond_all_) + char_skip]):
-    #   cond = '!'
-    # elif re.search("D", line[len(cond_all_) + char_skip]):
-    #   conddef = re.search("DI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\/\s]+)" + cbracket,
-    #                       line[len(cond_all_) + char_skip:])
-    #   if conddef:
-    #     comment_ = conddef.group('comment')
-    #   else:
-    #     conddef = re.search("DI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + cbracket,
-    #                         line[len(cond_all_) + char_skip:])
-    #     comment_ = ""
-    #   cond_nr_ = conddef.group('cond')
-    #   cond = 'DI[' + cond_nr_ + ':' + comment_ + ']'
-    #   print "%s" %cond
-    # elif re.search("R",
-    #                line[len(cond_all_) + char_skip]):
-    #   if re.search("I", line[len(cond_all_) + char_skip+1]):
-    #     conddef = re.search(
-    #       "RI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\/\s]+)" + cbracket,
-    #       line[len(cond_all_) + char_skip:])
-    #     if conddef:
-    #       comment_ = conddef.group('comment')
-    #     else:
-    #       conddef = re.search("RI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + cbracket,
-    #                           line[len(cond_all_) + char_skip:])
-    #       comment_ = ""
-    #     cond_nr_ = conddef.group('cond')
-    #     cond = 'RI[' + cond_nr_ + ":" + comment_ + ']'
-    #   else :
-    #     conddef = re.search(
-    #       "R" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\/\s]+)" + cbracket,
-    #       line[len(cond_all_) + char_skip:])
-    #     if conddef:
-    #       comment_ = conddef.group('comment')
-    #     else:
-    #       conddef = re.search("R" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + cbracket,
-    #                           line[len(cond_all_) + char_skip:])
-    #       comment_ = ""
-    #     cond_nr_ = conddef.group('cond')
-    #     cond = 'R[' + cond_nr_ + ":" + comment_ + ']'
-    #
-    # elif re.search("U",
-    #                  line[len(cond_all_) + char_skip]):
-    #   if re.search("I", line[len(cond_all_) + char_skip+1]):
-    #     conddef = re.search(
-    #         "UI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\/\s]+)" + cbracket,
-    #         line[len(cond_all_) + char_skip:])
-    #     if conddef:
-    #       comment_ = conddef.group('comment')
-    #     else:
-    #       conddef = re.search("UI" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + cbracket,
-    #                             line[len(cond_all_) + char_skip:])
-    #       comment_ = ""
-    #     cond_nr_ = conddef.group('cond')
-    #     cond = 'UI[' + cond_nr_ + ":" + comment_ + ']'
-    #   elif re.search("O", line[len(cond_all_) + char_skip+1]):
-    #     conddef = re.search(
-    #         "UO" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\/\s]+)" + cbracket,
-    #         line[len(cond_all_) + char_skip:])
-    #     if conddef:
-    #       comment_ = conddef.group('comment')
-    #     else:
-    #       conddef = re.search("UO" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + cbracket,
-    #                             line[len(cond_all_) + char_skip:])
-    #       comment_ = ""
-    #     cond_nr_ = conddef.group('cond')
-    #     cond = 'UO[' + cond_nr_ + ":" + comment_ + ']'
-    #
-    # elif re.search("F", line[len(cond_all_) + char_skip]):
-    #   conddef = re.search(
-    #     "F" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + ":" + "(?P<comment>[a-zA-Z0-9_\/\s]+)" + cbracket,
-    #     line[len(cond_all_) + char_skip:])
-    #   if conddef:
-    #     comment_ = conddef.group('comment')
-    #   else:
-    #     conddef = re.search("F" + obracket + "(?P<cond>[a-zA-Z0-9_]+)" + cbracket,
-    #                         line[len(cond_all_) + char_skip:])
-    #     comment_ = ""
-    #   cond_nr_ = conddef.group('cond')
-    #   cond = 'F[' + cond_nr_ + ":" + comment_ + ']'
-    # elif re.search("A", line[len(cond_all_) + char_skip]):
-    #   cond = 'AND'
-    # elif line[len(cond_all_) + char_skip].isspace():
-    #   cond = " "
-    # elif re.search(eq, line[len(cond_all_) + char_skip]):
-    #   cond = '='
-    # elif re.search("O", line[len(cond_all_) + char_skip]):
-    #   if re.search("N", line[len(cond_all_) + char_skip+1]):
-    #     cond = 'ON'
-    #   elif re.search("R", line[len(cond_all_) + char_skip+1]):
-    #     cond = 'OR'
-    #   elif re.search("F", line[len(cond_all_) + char_skip+1]):
-    #     cond = 'OFF'
-    # elif re.search(crbracket, line[len(cond_all_) + char_skip]):
-    #   cond = ')'
-    # elif re.search(ginteger, line[len(cond_all_) + char_skip]):
-    #   const_def_ = re.search(ginteger, line[len(cond_all_) + char_skip:])
-    #   const_ = const_def_.group(1)
-    #   if char_skip==14:
-    #     g_int_=1
-    #   cond = const_
-    # cond_all_ += cond
-    # if g_int_ == 1:
-    #   cond=''
-    # if re.findall('DI', cond):
-    #   cond = 'IN[' + cond_nr_ + ']'
-    # elif cond == "ON":
-    #   cond = '1'
-    # elif re.findall('R' + obracket, cond):
-    #   comment_=uploadva.delSpace(comment_)
-    #   cond = "Registers::" + 'R' + cond_nr_ + comment_
-    # elif re.findall('RI' + obracket, cond):
-    #   comment_=uploadva.delSpace(comment_)
-    #   cond = "RobotInput::" + 'RI' + cond_nr_ + comment_
-    # elif re.findall('UO' + obracket, cond):
-    #   comment_=uploadva.delSpace(comment_)
-    #   cond = "UserOutput::" + 'UO' + cond_nr_ + comment_
-    # elif re.findall('UI' + obracket, cond):
-    #   comment_=uploadva.delSpace(comment_)
-    #   cond = "UserInput::" + 'UI' + cond_nr_ + comment_
-    # elif re.findall('F' + obracket, cond):
-    #   comment_=uploadva.delSpace(comment_)
-    #   cond = "Flags::" + 'FLG' + cond_nr_ + comment_
-    # elif cond == "OFF":
-    #   cond = '0'
-    # elif cond == "=":
-    #   cond = '=='
-    # elif cond == "AND":
-    #   cond = '&&'
-    # elif cond == "OR":
-    #   cond = '||'
-    # cond_all_conv_ += cond
     cond_all_+=condition_[0]+condition_[1]+condition_[2]+condition_[3]+condition_[4]+condition_[5]+condition_[6]
-    #cond_all_ += condition_[0] + '[' + condition_[4] + condition_[3] + ']' + condition_[1] + condition_[2]
     if re.findall('DI', condition_[0]):
       condition_[0] = 'IN[' + condition_[2] + ']'
     elif re.findall('R' + obracket, condition_[0]+condition_[1]):
@@ -901,16 +808,23 @@ def makeConodition(line,if_sel_):
     elif re.findall('F' + obracket, condition_[0]+condition_[1]):
       condition_[3]=uploadva.delChars(condition_[3])
       condition_[0]= "Flags::" +condition_[0]+condition_[2]+condition_[3]
+    elif re.findall ('SI'+obracket,condition_[0]+condition_[1]):
+      condition_[3]=uploadva.delChars(condition_[3])
+      condition_[0]= condition_[0]+condition_[2]+condition_[3]
     elif condition_[0] == "AND":
       condition_[0] = '&&'
     elif condition_[0] == "OR":
       condition_[0] = '||'
+    elif condition_[0]==',':
+      break
     if condition_[6] == "ON":
       condition_[6] = '1'
     elif condition_[6] == "OFF":
       condition_[6] = '0'
     if condition_[5] == "=":
       condition_[5] = '=='
+    elif condition_[5]=='<>':
+      condition_[5]="!="
     if if_sel_=='SELECT':
       condition_[6]=""
 
@@ -926,7 +840,7 @@ def addStatement(scope_,routine_,vc_type_):
   return s
 
 def getLineNr(line):
-  line_nr_match=re.search("  (?P<line_number_>[0-9_]+):",line)
+  line_nr_match=re.search("(?P<line_number_>[\s0-9_]+):",line)
   if line_nr_match:
     line_nr_=line_nr_match.group('line_number_')
     return line_nr_
@@ -988,14 +902,22 @@ def OnStatementExecute(exec_, stat):
   i=0
   index=0
   curr_state_=exec_.CurrentStatement
-  
+  print "start"
   while index<=len(curr_state_.ParentRoutine.Statements)-1:
     if exec_.CurrentStatement==curr_state_.ParentRoutine.Statements[index]:
       break
-      
+    if curr_state_.ParentRoutine.Statements[index].Type=="IfElse":
+      state=curr_state_.ParentRoutine.Statements[index].ThenScope.Statements[0].Type
+      #print "state %s" %state
+      if exec_.CurrentStatement==curr_state_.ParentRoutine.Statements[index].ThenScope.Statements[0]:
+        index=index+1
+        break
+
+
+      #break
     index=index+1
   label_nr_=curr_state_.getProperty("LabelNr").Value
-  print "index:%s" %index
+  #print "index:%s" %index
   while i<= len(curr_state_.ParentRoutine.Statements)-1:
     if curr_state_.ParentRoutine.Statements[i].Name=="LBL%s" %label_nr_:
       print "%s" %i
@@ -1003,18 +925,39 @@ def OnStatementExecute(exec_, stat):
     i=i+1
   if i<index:
     while i<index-1:
-      exec_.callStatement(curr_state_.ParentRoutine.Statements[i+1],False)
-      delay(0.01)
+      print "i<index%s" %i
+      CallState(curr_state_.ParentRoutine.Statements[i+1],exec_)
+      delay(0.01)  
       i=i+1
-      print "meeh%s" %i
+      
   if i>index:
     print "i%s" %i
-    while i<len(curr_state_.ParentRoutine.Statements)-1:
-      exec_.callStatement(curr_state_.ParentRoutine.Statements[i+1],False)
-      delay(0.01)
-      i=i+1
-      print "ii%s" %i  
-      
+    k=index
+    #while i<len(curr_state_.ParentRoutine.Statements)-1:
+    #  CallState(curr_state_.ParentRoutine.Statements[i+1],exec_)
+    #  delay(0.01)
+
+      #print "i>index%s" %i
+    #  i=i+1
+
+    while index<=k<len(curr_state_.ParentRoutine.Statements)-1:
+      curr_state_.ParentRoutine.Statements.remove(curr_state_.ParentRoutine.Statements[k])
+      print "state deleted%s" %curr_state_.ParentRoutine.Statements[k].Type
+      #print "deleted"
+      k=k+1
+
+def CallState(statement_,exec_):
+  z=0
+  #if statement_.Type=="IfElse":
+  #  while z<len(statement_.ThenScope.Statements):
+  #    CallState(statement_.ThenScope.Statements[z],exec_)
+      #print "%s"%z
+  #    z=z+1
+  #else:
+  #  exec_.callStatement(statement_,False)
+  #  print "state executed%s" %statement_.Type
+  exec_.callStatement(statement_,False)
+  print "state executed%s" %statement_.Type
 """
 
 def TOOL_OFFSET_SCRIPT():

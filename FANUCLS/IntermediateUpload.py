@@ -147,23 +147,24 @@ def getMovementData(line_,filestring_,type_):
 
 def getSpeed(line_, type_):
   speed_data=["",""]
-  if type_=="joint":
+  if re.search(r"R" + obracket, line_):
+
+    speed_ = re.search(rnum, line_)
+    if speed_:
+
+      comment = speed_.group('comment')
+      register = speed_.group('pnum')
+      speed_data[0] = register
+      speed_data[1] = comment.split("]")[0]
+  elif type_=="joint":
     speed_ = re.search(r"(?P<speed>[a-zA-Z0-9_]+)%", line_)
-    #speed_ = int(speed_.group('speed')) / 100
     speed_data[0] = speed_.group('speed')
       #acc?
   elif type_ == "lin":
     speed_ = re.search(r"(?P<speed>[a-zA-Z0-9_]+)mm", line_)
-    #speed_ = int(speed_.group('speed'))
     speed_data[0]=speed_.group('speed')
       # acc?
-  if re.search(r",R" + obracket, line_):
-    speed_ = re.search("," + rnum, line_)
-    if speed_:
-      comment = speed.group('comment')
-      register = +speed.group('pnum')
-      speed_data[0] = register
-      speed_data[1] = comment
+
   return speed_data
 
 def getConfiguration(line):
@@ -199,12 +200,21 @@ def getBase(line):
 
 def getWait(line):
   i=0
-  var_comment_split_=["","",""]
-  value_=["","",""]
-  variable_type_=["","",""]
-  variable_nr_=["","",""]
+  var_comment_split_=["","","",""]
+  value_=["","","",""]
+  variable_type_=["","","",""]
+  variable_nr_=["","","",""]
+
   port_value_ = re.search(
-    "WAIT "+orbracket+r"(?P<var_type>[a-zA-Z]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket ,
+     "WAIT  "+"(?P<value>[\s.a-zA-Z0-9_]+)"  ,
+     line)
+  if port_value_:
+    value_[i]=port_value_.group('value')
+    wait_data = [variable_type_, variable_nr_, value_, var_comment_split_]
+
+    return wait_data
+  port_value_ = re.search(
+    "WAIT "+orbracket+r"(?P<var_type>[a-zA-Z/!]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket ,
     line)
   if not port_value_:
     port_value_ = re.search(
@@ -216,21 +226,17 @@ def getWait(line):
   var_comment_ = port_value_.group('comment')
   var_comment_split_[i] = var_comment_.split(']')[0]
   value_def_ = re.search(variable_type_[i] + obracket + variable_nr_[i] + var_comment_split_[i] + cbracket + eq + r"(?P<value>[a-zA-Z0-9]+)", line)
-  value_[i] = value_def_.group('value')
+  if value_def_:
+    value_[i] = value_def_.group('value')
   if i<len(var_comment_.split(']'))-1:
-    print "i:%s" % len(var_comment_.split(']'))
     i = i + 1
   else:
     wait_data = [variable_type_, variable_nr_, value_, var_comment_split_]
     return wait_data
-  #print " line %s" % (var_comment_.split(']')[1]+var_comment_.split(']')[2])
   while re.findall("OR",var_comment_.split(']')[i]) or re.findall("AND",var_comment_.split(']')[i]):
-    #i=i+1
-    print "len:%s" %i
     port_value_ = re.search(
-       r"(?P<var_type>[a-zA-Z]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' ,
+       r"(?P<var_type>[a-zA-Z/!]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' ,
       var_comment_.split(']')[i])
-
     variable_type_[i] = port_value_.group('var_type')
     variable_nr_[i] = port_value_.group('Nr')
 
@@ -238,10 +244,12 @@ def getWait(line):
 
     value_def_ = re.search(
       variable_type_[i] + obracket + variable_nr_[i] + var_comment_split_[i] + eq + r"(?P<value>[a-zA-Z0-9]+)", var_comment_.split("]")[i]+var_comment_.split("]")[i+1])
-    value_[i] = value_def_.group('value')
-    #print "%s" % var_comment_split_[i]
+    if value_def_:
+      value_[i] = value_def_.group('value')
     if not i < len(var_comment_.split(']'))-1:
       break
+    if re.search(orbracket,var_comment_.split(']')[i+1]):
+      print "break"
     i = i + 1
 
   wait_data=[variable_type_,variable_nr_,value_,var_comment_split_]
@@ -262,19 +270,15 @@ def getSetDO(line):
   return set_data
 
 def getComment(line):
-  commentString = re.search("!(?P<comment>[a-zA-Z0-9_\-\s\:\/]+)", line)
+  commentString = re.search("!(?P<comment>[a-zA-Z0-9_\-\s\:\/\=\>\[\]\.\,\;]+)", line)
   comment_=commentString.group('comment')
   return comment_
-
-def getIf(line):
-  cond=getCondition()
-  return cond
 
 def getCondition(line,cond_all_,char_skip):
   condition_ = ["", "", "","","","",""]
 
-  if re.search(r"(?P<signs>[\(\)\!\s]+)", line[len(cond_all_) + char_skip]):
-    conddef_ = re.search(r"(?P<signs>[\(\)\!\s]+)", line[len(cond_all_) + char_skip])
+  if re.search(r"(?P<signs>[\(\)\!\s\,]+)", line[len(cond_all_) + char_skip]):
+    conddef_ = re.search(r"(?P<signs>[\(\)\!\s\,]+)", line[len(cond_all_) + char_skip])
     cond=conddef_.group('signs')
     condition_[0] = cond
   elif re.search(r"(?P<var_type>[a-zA-Z]+)" + obracket ,
@@ -291,16 +295,12 @@ def getCondition(line,cond_all_,char_skip):
     comment=comment.split("]")
     condition_[3]=comment[0]
     condition_[4]=']'
-
-
-    #cond=conddef_.group('var_type')+'['+conddef_.group('Nr')+comment[0]+']'
-    value_def_=re.search(conddef_.group('var_type')+obracket+conddef_.group('Nr')+comment[0]+cbracket+eq+r"(?P<value>[a-zA-Z0-9]+)",line[len(cond_all_) + char_skip:])
+    value_def_=re.search(conddef_.group('var_type')+obracket+conddef_.group('Nr')+comment[0]+cbracket+r"(?P<eq>[\=\<\>\s]+)"+r"(?P<value>[a-zA-Z0-9]+)",line[len(cond_all_) + char_skip:])
     condition_[6]=""
     condition_[5]=""
     if value_def_:
       condition_[6]= value_def_.group('value')
-      condition_[5] = "="
-    #condition_=[cond,eq_str_,value_,comment[0],conddef_.group('Nr')]
+      condition_[5] = value_def_.group('eq')
   elif re.search(r"(?P<logic>[a-zA-Z]+)", line[len(cond_all_) + char_skip]):
     conddef_ = re.search(
       r"(?P<logic>[a-zA-Z]+)" ,line[len(cond_all_) + char_skip:])
@@ -308,6 +308,7 @@ def getCondition(line,cond_all_,char_skip):
     logic_=logic_.split(' ')
     cond=logic_[0]
     condition_[0] = cond
+
   return condition_
 
 def getCall(line):
@@ -315,7 +316,6 @@ def getCall(line):
   callDef = re.search(
     "CALL (?P<routine>[a-zA-Z0-9_]+)" + orbracket + '(?P<param1>[a-zA-Z0-9_]+)' + comma + '(?P<param2>[a-zA-Z0-9_]+)' + crbracket,
     line)
-  # + comma + '(?P<param2>(?:\s*:.*)?)' +
   if callDef:
     call_data=[callDef.group('routine'),callDef.group('param1'),callDef.group('param2')]
   elif re.search(
@@ -331,6 +331,53 @@ def getCall(line):
     line)
     call_data = [callDef.group('routine'), "",""]
   return call_data
+
+def getSetVariable(line):
+  set_var_data=["","","","","",""]
+  set_var_def_ = re.search(
+      comma+r"(?P<var_type1>[a-zA-Z/!]+)" + obracket + "(?P<Nr1>[a-zA-Z0-9_]+)" + '(?P<comment1>(?:\s*:.*)?)' + cbracket + eq + "(?P<value>[\(\)\.a-zA-Z0-9_]+)",
+      line)
+  if set_var_def_:
+    variable_type1_ = set_var_def_.group('var_type1')
+    variable_nr1_ = set_var_def_.group('Nr1')
+    var_comment1_ = set_var_def_.group('comment1')
+    value_ = set_var_def_.group('value')
+    set_var_data = [variable_type1_, variable_nr1_, var_comment1_, value_, "", ""]
+    return set_var_data
+
+  set_var_def_ = re.search(
+      r"(?P<var_type1>[a-zA-Z/!]+)" + obracket + "(?P<Nr1>[a-zA-Z0-9_]+)" + '(?P<comment1>(?:\s*:.*)?)' + cbracket + eq + r"(?P<var_type2>[a-zA-Z/!]+)" + obracket + "(?P<Nr2>[a-zA-Z0-9_]+)" + '(?P<comment2>(?:\s*:.*)?)' + cbracket,
+      line)
+  if set_var_def_:
+    variable_type1_ = set_var_def_.group('var_type1')
+    variable_nr1_ = set_var_def_.group('Nr1')
+    var_comment1_ = set_var_def_.group('comment1')
+    variable_type2_ = set_var_def_.group('var_type2')
+    variable_nr2_ = set_var_def_.group('Nr2')
+    var_comment2_ = set_var_def_.group('comment2')
+    set_var_data=[variable_type1_,variable_nr1_,var_comment1_,variable_type2_,variable_nr2_,var_comment2_]
+
+
+  else:
+    set_var_def_ = re.search(
+      r"(?P<var_type1>[a-zA-Z/!]+)" + obracket + "(?P<Nr1>[a-zA-Z0-9_]+)" + '(?P<comment1>(?:\s*:.*)?)' + cbracket + eq + "(?P<value>[\(\)\.a-zA-Z0-9_]+)",
+      line)
+    variable_type1_ = set_var_def_.group('var_type1')
+    variable_nr1_ = set_var_def_.group('Nr1')
+    var_comment1_ = set_var_def_.group('comment1')
+    value_ = set_var_def_.group('value')
+    set_var_data = [variable_type1_, variable_nr1_, var_comment1_, value_, "", ""]
+
+
+  return set_var_data
+
+def getMessage(line):
+  message_def_=re.search("MESSAGE"+obracket+r'(.*)'+cbracket,line)
+  message=""
+
+  if message_def_:
+    message=message_def_.group(0)
+  return message
 
 def getToolOffset(line):
   pass

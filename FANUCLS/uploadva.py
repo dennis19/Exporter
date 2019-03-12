@@ -121,10 +121,12 @@ def uploadva_(program, infile):
 
   numregString = blocks.get('$NUMREG', '')
   if numregString:
+
     numregs = re_numreg.finditer(numregString)
     for n in numregs:
       val = eval(n.group(2))
       comment=delChars(n.group(3))
+      #print "comment: %s" %comment
       # if val or comment:
       nindex = eval(n.group(1))
       prop = comp.createProperty(VC_REAL, 'Registers::R%i' % nindex + '%s' % comment)
@@ -322,11 +324,16 @@ def delChars(comment_):
       i = i + 1
 
   #delete :
-  if re.findall(":", comment_):
-    comment_ = comment_.split(":")
-    comment_ = comment_[1]
-  else:
-    comment_ = comment_
+  split_char_ = re.compile(r':')
+  comment_split_ = split_char_.split(comment_)
+  if comment_split_:
+    i = 1
+    comment_ = ''
+    while i <= len(comment_split_):
+
+      comment_ += comment_split_[i - 1]
+      i = i + 1
+
 
   #delete /
   split_char_ = re.compile(r'/')
@@ -335,6 +342,7 @@ def delChars(comment_):
     i = 1
     comment_ = ''
     while i <= len(comment_split_):
+
       comment_ += comment_split_[i - 1]
       i = i + 1
   return comment_
