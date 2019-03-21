@@ -50,13 +50,13 @@ def getValue( op, name, default=0, type=None, tab="" ):
 
   return default
 
-def GetBaseIndex( s ):
+def GetBaseIndex( s,controller ):
   for uf, b in enumerate(controller.Bases):
     if b == s.Base:
       return uf + 1
   return 0
 
-def GetToolIndex( s ):
+def GetToolIndex( s ,controller ):
   for ut, t in enumerate(controller.Tools):
     if t == s.Tool:
       return ut + 1
@@ -64,8 +64,8 @@ def GetToolIndex( s ):
 
 def doWriteTargetDefinition(ls,sn,statement):
 
-  uf = GetBaseIndex( statement )
-  ut = GetToolIndex( statement )
+  uf = GetBaseIndex( statement,controller )
+  ut = GetToolIndex( statement,controller )
 
   posFrame = statement.Positions[0]
   t4 = getValue( posFrame, 'JointTurns4', 0 )
@@ -80,7 +80,7 @@ def doWriteTargetDefinition(ls,sn,statement):
   except:
     comment = None
   if comment and comment != str(sn):
-    ls.write('P[%i:%s]{ \n' % (sn,comment) )
+    ls.write('P[%i]{ \n' % (sn) )
   else:
     ls.write('P[%i]{ \n' % (sn) )
   #endif
@@ -161,25 +161,25 @@ def WriteProgramBody( routine, name, filename ):
     #endif
     ls.write( '%s\n' % line )
   #endfor
-
-  ls.write("/POS\n")
-  positions = []
-  for s in routine.Statements:
-    if s.Type in [VC_STATEMENT_LINMOTION, VC_STATEMENT_PTPMOTION]:
-      if s.getProperty('INDEX'):
-        num = s.INDEX
-      else:
-        pName = s.Positions[0].Name
-        num = int(pName[pName.rindex('_')+1:])
-      #endif
-      positions.append((num, s))
-    #endif
-  #endif
-  positions.sort()
-
-  for n,s in positions:
-    doWriteTargetDefinition(ls,n,s)
-    
+  #
+  # ls.write("/POS\n")
+  # positions = []
+  # for s in routine.Statements:
+  #   if s.Type in [VC_STATEMENT_LINMOTION, VC_STATEMENT_PTPMOTION]:
+  #     if s.getProperty('INDEX'):
+  #       num = s.INDEX
+  #     else:
+  #       pName = s.Positions[0].Name
+  #       num = int(pName[pName.rindex('_')+1:])
+  #     #endif
+  #     positions.append((num, s))
+  #   #endif
+  # #endif
+  # positions.sort()
+  #
+  # for n,s in positions:
+  #   doWriteTargetDefinition(ls,n,s)
+  #
   ls.write("/END\n")
   ls.close
 
@@ -258,6 +258,7 @@ def OnStart():
 
     for routine in program.Routines:
       name = goodName( routine.Name )
+      name = routine.Name
       filename = head + "\\" + name + ".ls"
       if not WriteProgramBody( routine, name,  filename ):
         print "RSL to FANUC FAILED at routine: %s" % name
@@ -269,6 +270,7 @@ def OnStart():
     os.startfile(head)
   else:
     name = goodName( routine.Name )
+    name = routine.Name
     filename = head + "\\" + name + ".ls"
     if not WriteProgramBody( routine, name,  filename ):
       print "RSL to FANUC FAILED at routine: %s" % name

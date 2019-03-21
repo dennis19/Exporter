@@ -12,6 +12,10 @@ def OnStart():
   cmd = loadCommand('FanucConvert', cmduri)
   addMenuItem('VcProgramStatements/ProgramStatements/LS', 'Convert RSL program to FANUC LS', -1, cmd.Name, 'Converts the currently selected RSL subprogram into a FANUC LS program', 'rsMetadataShow' )
 
+  cmduri = getApplicationPath() + 'convertva.py'
+  cmd = loadCommand('FanucConvertVa', cmduri)
+  addMenuItem('VcProgramStatements/ProgramStatements/LS', 'Convert RSL program to FANUC VA', -1, cmd.Name, 'Converts the currently selected RSL subprogram into a FANUC VA program', 'rsMetadataShow' )
+
   cmduri = getApplicationPath() + 'deleteroutine.py'
   cmd = loadCommand('FanucDeleteRoutine', cmduri)
   addMenuItem('VcProgramStatements/ProgramStatements/LS', 'Delete FANUC LS Subprogram', -1, cmd.Name, 'Removes selected Subprogram including any LS references', 'rTrashcan' )

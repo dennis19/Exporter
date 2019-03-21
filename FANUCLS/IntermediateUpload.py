@@ -139,9 +139,9 @@ def getMovementData(line_,filestring_,type_):
             tool=getTool(lineFindCoord)
           if base==0:
             base=getBase(lineFindCoord)
+  print "WPR %s,%s,%s point %s" %(idp,idr,idw,point_)
 
-
-  coordinates_=[idx,idy,idz,idp,idr,idw]
+  coordinates_=[idx,idy,idz,idw,idp,idr]
   moveData=[point_,speed_,coordinates_,cfgData,base,tool]
   return moveData
 
@@ -264,13 +264,14 @@ def getSetDO(line):
   variable_type_=port_value_.group('var_type')
   variable_nr_=port_value_.group('Nr')
   value_=port_value_.group('value')
+  comment_=port_value_.group('comment')
 
 
-  set_data = [variable_type_, variable_nr_, value_]
+  set_data = [variable_type_, variable_nr_, value_,comment_]
   return set_data
 
 def getComment(line):
-  commentString = re.search("!(?P<comment>[a-zA-Z0-9_\-\s\:\/\=\>\[\]\.\,\;]+)", line)
+  commentString = re.search("!(?P<comment>[a-zA-Z0-9_\-\s\:\/\=\>\[\]\.\,]+)", line)
   comment_=commentString.group('comment')
   return comment_
 
@@ -295,7 +296,7 @@ def getCondition(line,cond_all_,char_skip):
     comment=comment.split("]")
     condition_[3]=comment[0]
     condition_[4]=']'
-    value_def_=re.search(conddef_.group('var_type')+obracket+conddef_.group('Nr')+comment[0]+cbracket+r"(?P<eq>[\=\<\>\s]+)"+r"(?P<value>[a-zA-Z0-9]+)",line[len(cond_all_) + char_skip:])
+    value_def_=re.search(conddef_.group('var_type')+obracket+conddef_.group('Nr')+comment[0]+cbracket+r"(?P<eq>[\=\<\>]+)"+r"(?P<value>[a-zA-Z0-9]+)",line[len(cond_all_) + char_skip:])
     condition_[6]=""
     condition_[5]=""
     if value_def_:
@@ -331,6 +332,21 @@ def getCall(line):
     line)
     call_data = [callDef.group('routine'), "",""]
   return call_data
+
+def getLabel(line):
+  nr_match_=re.search("LBL" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket,line)
+  nr_=nr_match_.group('Nr')
+  comment_=nr_match_.group('comment')
+
+  return [nr_,comment_]
+def getJMP(line):
+  JmpLblGroup = re.search("JMP (?P<JmpLbl>[a-zA-Z0-9\[\]\:_]+)", line)
+  jmp_data_=""
+  if JmpLblGroup:
+    JmpLbl = JmpLblGroup.group('JmpLbl')
+    JmpLblNrGroup = re.search("LBL" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)", JmpLbl)
+    jmp_data_ = JmpLblNrGroup.group('Nr')
+  return jmp_data_
 
 def getSetVariable(line):
   set_var_data=["","","","","",""]

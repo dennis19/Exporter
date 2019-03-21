@@ -370,10 +370,13 @@ def readPos(s,line,robCnt,filestring,type,program):
   m.translateAbs(move_data_[2][0], move_data_[2][1], move_data_[2][2])
   m.setWPR( move_data_[2][3],  move_data_[2][4],  move_data_[2][5])
 
+
+
   posFrame = s.Positions[0]
   posFrame.PositionInReference = m
   posFrame.Name = move_data_[0]
   posFrame.Configuration = move_data_[3]
+  print "WPR %s,%s,%s point %s" % (m.WPR.X, m.WPR.Y, m.WPR.Z, posFrame.Name)
   if move_data_[4]== 0:
     s.Base = robCnt.Bases[0]
   else:
@@ -398,8 +401,12 @@ def readBase(line):
     baseDef= int(baseMatch.group('uf'))
   return baseDef	
 
-def readToolOffset(line,program,routine_,scope_):
-
+def readToolOffset(line,program,routine_,scope_,filestring_):
+  print "line :%s" %line
+  exec_ = program.Executor
+  rob_cnt_ = exec_.Controller
+  kin_ = rob_cnt_.Kinematics
+  comp_ = kin_.Component
   if re.findall(",PR",line):
 
     pos_reg_off_def_=re.search(","+prnum,line)
@@ -426,11 +433,27 @@ def readToolOffset(line,program,routine_,scope_):
         pos_.translateAbs(pos_vec_.X,pos_vec_.Y,pos_vec_.Z)
         pos_.WPR=pos_wpr_
         pos_.translateRel(offset_vec_.X,offset_vec_.Y,offset_vec_.Z)
+        base=pos_statement_.Base
 
-    exec_ = program.Executor
-    rob_cnt_ = exec_.Controller
-    kin_ = rob_cnt_.Kinematics
-    comp_ = kin_.Component
+      else :
+        move_data_=IntermediateUpload.getMovementData(line,filestring_,"LIN")
+        pos_statement_ = move_data_[3]
+        pos_=vcMatrix.new()
+        pos_.translateRel(move_data_[2][0], move_data_[2][1], move_data_[2][2])
+        pos_.setWPR(move_data_[2][3], move_data_[2][4], move_data_[2][5])
+        if move_data_[4] == 0:
+          base = rob_cnt_.Bases[0]
+        else:
+          base = rob_cnt_.Bases[move_data_[4] - 1]
+
+
+        # pos_vec_ = pos_statement_.P
+        # pos_wpr_ = pos_statement_.WPR
+        # pos_.translateAbs(pos_vec_.X,pos_vec_.Y,pos_vec_.Z)
+        # pos_.WPR=pos_wpr_
+      pos_.translateRel(offset_vec_.X,offset_vec_.Y,offset_vec_.Z)
+
+
 
     s = addStatement(scope_, routine_, 'Process')
 
@@ -439,7 +462,7 @@ def readToolOffset(line,program,routine_,scope_):
     ph_.Script = TOOL_OFFSET_SCRIPT()
     s.Process = ph_
     s.Name = 'ToolOffset'
-    s.Base=pos_statement_.Base
+    s.Base=base
     if not glob_tool_ == 0:
       s.Tool = rob_cnt_.Tools[int(glob_tool_)-1].Name
     else:
@@ -487,7 +510,7 @@ def createSELECT(line,robCnt,routine,filestring,scope,program):
       elif jmp_fct_:
         sthen = createJMP(line_select_,routine,s.ThenScope)
         s.ThenScope.Statements.append(sthen)
-      s.Condition = makeConodition(line, 'SELECT')+select_choices_.group("Nr")
+      s.Condition = makeConodition(line, 'SELECT',s)+select_choices_.group("Nr")
       if in_select_==1:
         setLineSkip()
       in_select_=1
@@ -497,7 +520,7 @@ def createSELECT(line,robCnt,routine,filestring,scope,program):
 def createIF(line,routine,filestring,scope,program):
   #create IfStatement
   s = addStatement(scope, routine, VC_STATEMENT_IF)
-  s.Condition=makeConodition(line,'IF')
+  s.Condition=makeConodition(line,'IF',s)
 
   line_nr_=getLineNr(line)
 
@@ -530,7 +553,7 @@ def createPTP(line,robCnt,routine,filestring,scope,program):
 def createLinear(line,robCnt,routine,filestring,scope,program):
   posr_name_= re.search(prnum,line)
   if re.findall("Tool_Offset,", line):
-    s= readToolOffset(line,program,routine,scope)
+    s= readToolOffset(line,program,routine,scope,filestring)
   else:
     if posr_name_:
       callRoutine = program.findRoutine("POSREG_PR[" + posr_name_.group('pnum') + posr_name_.group('comment') + "]")
@@ -547,6 +570,8 @@ def createSetDO(line,routine,scope):
 
   set_data=IntermediateUpload.getSetDO(line)
   s.OutputPort=int(set_data[1])
+  s.Name=set_data[3]
+  print "%s" %s.Name
   if set_data[2] == 'ON':
     s.OutputValue=1
   elif set_data[2] == 'OFF':
@@ -569,7 +594,7 @@ def createWaitDI(line,routine,scope):
 
   if wait_data[0][0]=="DI":
     s = addStatement(scope, routine, VC_STATEMENT_WAITBIN)
-
+    s.Name=wait_data[3][0]
     s.InputPort=int(wait_data[1][0])
     if wait_data[2][0] == 'ON':
       s.InputValue=1
@@ -684,11 +709,7 @@ def readSpeed(line,s):
 
 
 def createJMP(line,routine_,scope):
-  JmpLblGroup = re.search("JMP (?P<JmpLbl>[a-zA-Z0-9\[\]\:_]+)", line)
-  if JmpLblGroup:
-    JmpLbl = JmpLblGroup.group('JmpLbl')
-    JmpLblNrGroup = re.search("LBL" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)", JmpLbl)
-    nr_ = JmpLblNrGroup.group('Nr')
+  if not IntermediateUpload.getJMP(line)=="":
 
     exec_ = routine_.Program.Executor
     rob_cnt_=exec_.Controller
@@ -701,7 +722,7 @@ def createJMP(line,routine_,scope):
     ph_.Script = JMP_GET_PROCESS_HANDLER_SCRIPT()
     s.Process = ph_
     s.createProperty(VC_STRING, "LabelNr")
-    s.getProperty("LabelNr").Value = nr_
+    s.getProperty("LabelNr").Value = IntermediateUpload.getJMP(line)
 
     s.Name = "JMP"+str(s.getProperty("LabelNr").Value)
     return s
@@ -724,8 +745,11 @@ def WAIT(scope_,routine_,var_,var_comment_,var_value_,):
   while i<=len(var_)-1:
     s.createProperty(VC_STRING, "Variable %s"%i)
     s.createProperty(VC_INTEGER, "Value %s"%i)
+    s.createProperty(VC_STRING, "Comment %s" % i)
+
     s.getProperty("Variable %s"%i).Value = var_[i]
     s.getProperty("Value %s"%i).Value = int(var_value_[i])
+    s.getProperty("Comment %s" % i).Value = var_comment_[i]
     i=i+1
   s.Name = "WAIT"
   return s
@@ -737,13 +761,18 @@ def createLBL(line_,routine_,scope_):
   comp_ = kin_.Component
 
   s=addStatement(scope_,routine_,'Process')
-  nr_match_=re.search("LBL" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket,line_)
-  nr_=nr_match_.group('Nr')
+
+  #nr_match_=re.search("LBL" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket,line_)
+  #nr_=nr_match_.group('Nr')
+  lbl_data_=IntermediateUpload.getLabel(line_)
+
   # create Processhandler
   ph_ = comp_.createBehaviour('rPythonProcessHandler', 'LBLProcessHandler')
   s.Process = ph_
   s.createProperty(VC_INTEGER, "LabelNr")
-  s.getProperty("LabelNr").Value = int(nr_)
+  s.createProperty(VC_STRING, "Comment")
+  s.getProperty("LabelNr").Value = int(lbl_data_[0])
+  s.getProperty("Comment").Value = lbl_data_[1]
 
   s.Name = "LBL"+str(s.getProperty("LabelNr").Value)
   return s
@@ -777,7 +806,7 @@ def createAssign(routine_,scope_,var_,value_):
     s.TargetProperty=str(var_)
   return s
 
-def makeConodition(line,if_sel_):
+def makeConodition(line,if_sel_,statement):
   cond_all_=''
   cond_all_conv_=''
   cond=''
@@ -791,8 +820,12 @@ def makeConodition(line,if_sel_):
                  line[len(cond_all_) + char_skip:len(cond_all_) + char_skip + 4]) or re.search(r"(?P<logic>[a-zA-Z]+)", line[len(cond_all_) + char_skip]):
     condition_=IntermediateUpload.getCondition(line,cond_all_,char_skip)
     cond_all_+=condition_[0]+condition_[1]+condition_[2]+condition_[3]+condition_[4]+condition_[5]+condition_[6]
+    print "condition : %s" %condition_[0]
     if re.findall('DI', condition_[0]):
       condition_[0] = 'IN[' + condition_[2] + ']'
+      comment_property="Comment%s"%condition_[2]
+      statement.createProperty(VC_STRING,comment_property)
+      statement.getProperty(comment_property).Value=condition_[3]
     elif re.findall('R' + obracket, condition_[0]+condition_[1]):
       condition_[3]=uploadva.delChars(condition_[3])
       condition_[0] = "Registers::" + condition_[0]+condition_[2]+condition_[3]

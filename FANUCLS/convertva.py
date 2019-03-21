@@ -69,87 +69,10 @@ def OnStart():
   executor = program.Executor
   comp = executor.Component
   controller = executor.Controller
-  k=0
-  while k<len(comp.Properties):
-    if re.findall("Registers::",comp.Properties[k].Name):
-      print "%s" %comp.Properties[k].Name
-    k+=1
 
-  rname = routine.Name
+  writeNumReg(comp)
 
-  note =  comp.findBehaviour( rname )
-  if not note:
-    note = comp.createBehaviour( VC_NOTE, rname )
-  #endif
 
-  comp.createProperty(VC_BOOLEAN,"%s::SkipExecution"%rname)
-
-  if routine.Name=="Main":
-    routine.Name="PNS0001"
-
-  header = """/PROG  %s
-/ATTR
-OWNER           = MNEDITOR;
-COMMENT         = "%s";
-PROG_SIZE       = 0;
-CREATE          = %s;
-MODIFIED        = %s;
-FILE_NAME       = ;
-VERSION         = 0;
-LINE_COUNT      = 0;
-MEMORY_SIZE     = 0;
-PROTECT         = READ_WRITE;
-TCD:  STACK_SIZE        = 0,
-      TASK_PRIORITY     = 50,
-      TIME_SLICE        = 0,
-      BUSY_LAMP_OFF     = 0,
-      ABORT_REQUEST     = 0,
-      PAUSE_REQUEST     = 0;
-DEFAULT_GROUP   = 1,*,*,*,*;
-CONTROL_CODE    = 00000000 00000000;
-/APPL
-/MN
-"""
-  td = time.strftime("DATE %y-%m-%d  TIME %H:%M:%S")
-  text = header % (rname, rname, td, td)
-
-  mainroutine = comp.getProperty('MainRoutine')
-  if mainroutine:
-    stepValues = mainroutine.StepValues
-    if rname not in stepValues:
-      stepValues.append(rname)
-      mainroutine.StepValues = stepValues
-    #endif
-  #endif
-
-  label = 1
-  uframe_num = -1
-  utool_num = -1
-  statementCount = 1
-  ##for statement in getAllStatements(routine):
-  for statement in routine.Statements:
-    writeStatement( statement )
-  #endfor
-  pos_="""/POS\n"""
-  text+=pos_
-  positions = []
-  for s in routine.Statements:
-    if s.Type in [VC_STATEMENT_LINMOTION, VC_STATEMENT_PTPMOTION]:
-      if s.getProperty('INDEX'):
-        num = s.INDEX
-      else:
-        pName = s.Positions[0].Name
-        num = int(pName[pName.rindex('_')+1:])
-      #endif
-      positions.append((num, s))
-    #endif
-  #endif
-  positions.sort()
-
-  for n,s in positions:
-    text+=doWriteTargetDefinition(n,s)
-
-  note.Note = text
 
 # def writeLocalCoords(statement):
 #   global text
@@ -169,6 +92,40 @@ CONTROL_CODE    = 00000000 00000000;
 #
 #       line+="\n};"
 #   text+=line
+
+def writeNumReg(comp):
+  k = 0
+  line = ""
+  while k < len(comp.Properties):
+    if re.findall("Registers::", comp.Properties[k].Name):
+      reg_def_ = re.search("R" + "(?P<Nr>[0-9_]+)" + r'(.*)', comp.Properties[k].Name)
+      if reg_def_:
+        nr_ = reg_def_.group('Nr')
+        comment_ = reg_def_.group(2)
+        if int(nr_) > 200:
+          comment_ = nr_[3:]
+          nr_ = nr_[0:3]
+        line += "  [" + nr_ + "] = " + str(comp.Properties[k].Value) + "  '" + comment_ + "'" + "\n"
+    k += 1
+
+  rname = "NUMREG"
+
+  note = comp.findBehaviour(rname)
+  if not note:
+    note = comp.createBehaviour(VC_NOTE, rname)
+  # endif
+
+  comp.createProperty(VC_BOOLEAN, "%s::SkipExecution" % rname)
+
+  header = """[*NUMREG*]$NUMREG  Storage: CMOS  Access: RW  : ARRAY[200] OF Numeric Reg
+  """
+  end_ = """
+  [*NUMREG*]$MAXREGNUM  Storage: CMOS  Access: RW  : INTEGER = 200"""
+  td = time.strftime("DATE %y-%m-%d  TIME %H:%M:%S")
+  text = header
+  text += line
+  text += end_
+  note.Note = text
 
 def writeStatement( statement ):
   global text, statementCount, uframe_num, utool_num, label
