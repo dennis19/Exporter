@@ -7,7 +7,11 @@
     <list default="true" id="0c5a0b6f-5a76-44a1-9a4e-638683180a5a" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/IntermediateUpload.py" beforeDir="false" afterPath="$PROJECT_DIR$/IntermediateUpload.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/convert.py" beforeDir="false" afterPath="$PROJECT_DIR$/convert.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/download.py" beforeDir="false" afterPath="$PROJECT_DIR$/download.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/upload.py" beforeDir="false" afterPath="$PROJECT_DIR$/upload.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/uploadsum.py" beforeDir="false" afterPath="$PROJECT_DIR$/uploadsum.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/uploadva.py" beforeDir="false" afterPath="$PROJECT_DIR$/uploadva.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -16,14 +20,14 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.4625922">
+    <splitter split-orientation="horizontal" split-proportion="0.46153846">
       <split-first>
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/uploadva.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="1649">
-                  <caret line="101" column="10" selection-start-line="101" selection-start-column="4" selection-end-line="101" selection-end-column="10" />
+                <state relative-caret-position="962">
+                  <caret line="182" column="45" selection-start-line="182" selection-start-column="31" selection-end-line="182" selection-end-column="45" />
                   <folding>
                     <element signature="e#0#23#0" expanded="true" />
                   </folding>
@@ -31,11 +35,14 @@
               </provider>
             </entry>
           </file>
-          <file pinned="false" current-in-tab="false">
+          <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/download.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="3570">
-                  <caret line="218" column="22" selection-start-line="218" selection-start-column="22" selection-end-line="218" selection-end-column="22" />
+                <state relative-caret-position="547">
+                  <caret line="444" column="73" selection-start-line="444" selection-start-column="73" selection-end-line="444" selection-end-column="73" />
+                  <folding>
+                    <element signature="e#81#108#0" expanded="true" />
+                  </folding>
                 </state>
               </provider>
             </entry>
@@ -43,8 +50,8 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/convert.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="2941">
-                  <caret line="177" column="40" selection-start-line="177" selection-start-column="23" selection-end-line="177" selection-end-column="40" />
+                <state relative-caret-position="-1989">
+                  <caret line="288" lean-forward="true" selection-start-line="288" selection-end-line="288" />
                   <folding>
                     <element signature="e#0#23#0" expanded="true" />
                   </folding>
@@ -55,8 +62,8 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/convertva.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="1547">
-                  <caret line="95" column="20" selection-start-line="95" selection-start-column="20" selection-end-line="95" selection-end-column="20" />
+                <state relative-caret-position="8228">
+                  <caret line="488" column="10" selection-start-line="488" selection-start-column="5" selection-end-line="488" selection-end-column="10" />
                   <folding>
                     <element signature="e#0#23#0" expanded="true" />
                   </folding>
@@ -65,31 +72,10 @@
             </entry>
           </file>
           <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/__init__.py">
+            <entry file="file://$PROJECT_DIR$/uploadsum.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="68">
-                  <caret line="4" selection-start-line="4" selection-end-line="4" />
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="false">
-            <entry file="file://$PROJECT_DIR$/../ABBMOD/convert.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="2839">
-                  <caret line="169" column="28" selection-start-line="169" selection-start-column="28" selection-end-line="169" selection-end-column="28" />
-                  <folding>
-                    <element signature="e#0#23#0" expanded="true" />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-          <file pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/IntermediateUpload.py">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="248">
-                  <caret line="125" column="35" selection-start-line="125" selection-start-column="35" selection-end-line="125" selection-end-column="35" />
+                <state relative-caret-position="537">
+                  <caret line="54" selection-start-line="54" selection-end-line="54" />
                   <folding>
                     <element signature="e#0#23#0" expanded="true" />
                   </folding>
@@ -102,10 +88,10 @@
       <split-second>
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
           <file pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/upload.py">
+            <entry file="file://$PROJECT_DIR$/IntermediateConvert.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="530">
-                  <caret line="269" column="15" selection-start-line="269" selection-start-column="15" selection-end-line="269" selection-end-column="15" />
+                <state relative-caret-position="544">
+                  <caret line="514" column="35" selection-start-line="514" selection-start-column="35" selection-end-line="514" selection-end-column="35" />
                   <folding>
                     <element signature="e#0#23#0" expanded="true" />
                   </folding>
@@ -114,19 +100,47 @@
             </entry>
           </file>
           <file pinned="false" current-in-tab="false">
-            <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_FEHLER.LS">
+            <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_4_TR_T1.LS">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="253">
-                  <caret line="450" column="27" selection-start-line="450" selection-start-column="27" selection-end-line="450" selection-end-column="27" />
+                <state relative-caret-position="-2442" />
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_START.LS">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="561">
+                  <caret line="66" column="22" selection-start-line="66" selection-start-column="22" selection-end-line="66" selection-end-column="22" />
                 </state>
               </provider>
             </entry>
           </file>
           <file pinned="false" current-in-tab="false">
-            <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_1_EIN.LS">
+            <entry file="file://$PROJECT_DIR$/IntermediateUpload.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="850">
-                  <caret line="50" column="30" lean-forward="true" selection-start-line="50" selection-start-column="30" selection-end-line="50" selection-end-column="30" />
+                <state relative-caret-position="306">
+                  <caret line="388" column="14" selection-start-line="388" selection-start-column="4" selection-end-line="388" selection-end-column="14" />
+                  <folding>
+                    <element signature="e#0#23#0" expanded="true" />
+                  </folding>
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_3A_FTP_Z_T1.LS">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="85">
+                  <caret line="29" column="41" lean-forward="true" selection-start-line="29" selection-start-column="41" selection-end-line="29" selection-end-column="41" />
+                </state>
+              </provider>
+            </entry>
+          </file>
+          <file pinned="false" current-in-tab="false">
+            <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/PNS0001.LS">
+              <provider selected="true" editor-type-id="text-editor">
+                <state relative-caret-position="648">
+                  <caret line="57" column="44" selection-start-line="57" selection-start-column="44" selection-end-line="57" selection-end-column="44" />
                 </state>
               </provider>
             </entry>
@@ -169,25 +183,29 @@
         <option value="$PROJECT_DIR$/../../../AddCommands/JmpCommand.py" />
         <option value="F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_5/MC/AOA/PNS0001.LS" />
         <option value="F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/PNS0001.LS" />
-        <option value="$PROJECT_DIR$/uploadsum.py" />
         <option value="F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_2A_RTP_T1.LS" />
         <option value="F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_2B_RTP_T1.LS" />
         <option value="F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_3B_FTP_H_T1.LS" />
         <option value="$PROJECT_DIR$/uploadBackup.py" />
-        <option value="$PROJECT_DIR$/uploadva.py" />
         <option value="F:/Dennis/Masterarbeit/Fanuc_ImporterTest/Roboguide_Simu/Test.ls" />
         <option value="F:/Dennis/Masterarbeit/Fanuc_ImporterTest/Roboguide_Simu/Job1.ls" />
-        <option value="$PROJECT_DIR$/download.py" />
         <option value="F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/AOA/PROG1.LS" />
         <option value="F:/Dennis/Masterarbeit/Fanuc_ImporterTest/Roboguide_Simu/PNS0001.ls" />
-        <option value="$PROJECT_DIR$/convert.py" />
         <option value="$PROJECT_DIR$/__init__.py" />
         <option value="$PROJECT_DIR$/convertva.py" />
         <option value="F:/Dennis/Roboguide/MyWorkcells/100157-40-03/Robot_2/MC/J_3_HOCH_20120914.LS" />
         <option value="F:/Dennis/Roboguide/MyWorkcells/100157-40-03/Robot_2/MC/J_4_NACH.LS" />
         <option value="F:/Dennis/Roboguide/MyWorkcells/100157-40-03/Robot_2/MC/J_1_PICK.LS" />
+        <option value="$PROJECT_DIR$/uploadva.py" />
+        <option value="$PROJECT_DIR$/uploadsum.py" />
+        <option value="F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/POSREG.va" />
+        <option value="F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/TestFiles/POSREG.va" />
+        <option value="F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_FEHLER.LS" />
         <option value="$PROJECT_DIR$/IntermediateUpload.py" />
         <option value="$PROJECT_DIR$/upload.py" />
+        <option value="$PROJECT_DIR$/IntermediateConvert.py" />
+        <option value="$PROJECT_DIR$/convert.py" />
+        <option value="$PROJECT_DIR$/download.py" />
       </list>
     </option>
   </component>
@@ -202,7 +220,20 @@
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
-    <panes />
+    <panes>
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="FANUCLS" type="b2602c69:ProjectViewProjectNode" />
+              <item name="FANUCLS" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+      <pane id="Scope" />
+    </panes>
   </component>
   <component name="PropertiesComponent">
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
@@ -243,28 +274,9 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
+    <frame x="-8" y="-8" width="1936" height="1176" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" weight="0.115384616" />
-      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
-      <window_info id="Favorites" order="2" side_tool="true" />
-      <window_info anchor="bottom" id="Message" order="0" />
-      <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" id="Run" order="2" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
-      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
-      <window_info anchor="bottom" id="TODO" order="6" />
-      <window_info anchor="bottom" id="Version Control" order="7" />
-      <window_info anchor="bottom" id="Terminal" order="8" />
-      <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" weight="0.32950193" />
-      <window_info anchor="bottom" id="Python Console" order="10" weight="0.32950193" />
-      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
-      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
-      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-    </layout>
-    <layout-to-restore>
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.115384616" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
@@ -282,261 +294,227 @@
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
-    </layout-to-restore>
+    </layout>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_VORBED.LS">
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/100157-40-03/Robot_2/MC/J_1_PICK.LS" />
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/100157-40-03/Robot_2/MC/POSREG.va" />
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_3A_FTP_Z.LS" />
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/AOA/PROG1.LS" />
+    <entry file="file://F:/Dennis/ProjekteDennis/1111272/Vorlage Stasiek/2018_03_12/ascii/T1_PR_INIT.LS" />
+    <entry file="file://F:/Dennis/ProjekteDennis/Untersuchung_DMAX/Robotersimulation/Programm/Bin1_HD-Lanzen.ls" />
+    <entry file="file://F:/Dennis/ProjekteDennis/Untersuchung_DMAX/Robotersimulation/Programm/PNS0001.ls" />
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/NUMREG.va" />
+    <entry file="file://$PROJECT_DIR$/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="697">
-          <caret line="50" column="32" selection-start-line="50" selection-start-column="30" selection-end-line="50" selection-end-column="32" />
+        <state relative-caret-position="68">
+          <caret line="4" selection-start-line="4" selection-end-line="4" />
         </state>
       </provider>
     </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_CLS.LS">
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_1_EIN.LS" />
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_CLS.LS" />
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/JOB_2.LS" />
+    <entry file="file://$PROJECT_DIR$/../ABBMOD/convert.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="544">
-          <caret line="32" column="14" selection-start-line="32" selection-start-column="7" selection-end-line="32" selection-end-column="14" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_OVERRD.LS">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$USER_HOME$/AppData/Local/Temp/7zO13E3.tmp/MAIN.LS" />
-    <entry file="file://$USER_HOME$/AppData/Local/Temp/7zO93BC.tmp/MAIN.LS" />
-    <entry file="file://$PROJECT_DIR$/../../../AddCommands/JumpStatement/__JumpStatement__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1428">
-          <caret line="88" column="40" selection-start-line="88" selection-start-column="40" selection-end-line="88" selection-end-column="40" />
-          <folding>
-            <element signature="e#0#27#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/ProjekteDennis/1111272/Vorlage Stasiek/2018_03_12/ascii/MAIN.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1564">
-          <caret line="92" column="30" selection-start-line="92" selection-start-column="22" selection-end-line="92" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/ProjekteDennis/1111272/Vorlage Stasiek/2018_03_12/ascii/PICK_CLEAN1_M1.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3451">
-          <caret line="203" column="78" selection-start-line="203" selection-start-column="78" selection-end-line="203" selection-end-column="78" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/uploadsum.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="442">
-          <caret line="26" column="112" selection-start-line="26" selection-start-column="78" selection-end-line="26" selection-end-column="112" />
+        <state relative-caret-position="962">
+          <caret line="169" column="28" selection-start-line="169" selection-start-column="28" selection-end-line="169" selection-end-column="28" />
           <folding>
             <element signature="e#0#23#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://F:/Dennis/ProjekteDennis/1111272/Vorlage Stasiek/2018_03_12/ascii/STYLE029.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="985">
-          <caret line="67" column="51" selection-start-line="67" selection-start-column="37" selection-end-line="67" selection-end-column="51" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Masterarbeit/Fanuc_ImporterTest/Roboguide_Simu/HP_Nozzles.ls">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="577">
-          <caret line="40" column="38" lean-forward="true" selection-start-line="40" selection-start-column="38" selection-end-line="40" selection-end-column="38" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/uploadBackup.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1462">
-          <caret line="94" column="3" selection-start-line="94" selection-start-column="3" selection-end-line="94" selection-end-column="3" />
-          <folding>
-            <element signature="e#0#23#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Masterarbeit/Fanuc_ImporterTest/Roboguide_Simu/Job1.ls">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="408">
-          <caret line="24" column="11" selection-start-line="24" selection-start-column="11" selection-end-line="24" selection-end-column="11" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Masterarbeit/Fanuc_ImporterTest/Roboguide_Simu/Test.ls">
-      <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <caret column="11" selection-start-column="11" selection-end-column="11" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_1_EIN_T1.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1462">
-          <caret line="86" column="17" lean-forward="true" selection-start-line="86" selection-start-column="17" selection-end-line="86" selection-end-column="17" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/VisualComponents/Modelle/1111272/40-01/Backup_Reinigung/HP_Nozzles.ls">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$USER_HOME$/AppData/Local/Microsoft/Windows/Temporary Internet Files/Content.Outlook/E4LZX84Y/POSREG.va" />
-    <entry file="file://F:/Dennis/ProjekteDennis/1111272/Vorlage Stasiek/Abgleich/HP_NOZZLES.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="646">
-          <caret line="38" column="17" lean-forward="true" selection-start-line="38" selection-start-column="17" selection-end-line="38" selection-end-column="17" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/VisualComponents/Modelle/1111272/40-01/Backup_Reinigung/PosReg_HPNozzles_Fuehrung.ls">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://F:/Dennis/VisualComponents/Modelle/1111272/40-01/Backup_Reinigung/PosReg_PrePos_HPNozzles_Ventil.ls">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://F:/Dennis/VisualComponents/Modelle/1111272/40-01/Backup_Reinigung/PosReg_Home.ls">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://F:/Dennis/VisualComponents/Modelle/1111272/40-01/Backup_Reinigung/PrePosDP.ls">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://F:/Dennis/VisualComponents/Modelle/1111272/40-01/Backup_Reinigung/Job1.ls">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="442">
-          <caret line="26" column="13" lean-forward="true" selection-start-line="26" selection-start-column="13" selection-end-line="26" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Masterarbeit/Fanuc_ImporterTest/Roboguide_Simu/PNS0001.ls">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="17">
-          <caret line="20" column="5" lean-forward="true" selection-start-line="20" selection-start-column="5" selection-end-line="20" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_5_VAK1_IN_T1.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2822">
-          <caret line="166" column="39" selection-start-line="166" selection-start-column="8" selection-end-line="166" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/TestFiles/S_VORBED.ls" />
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/SUMMARY.DG" />
+    <entry file="file://F:/NUMREG.va" />
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/TestFiles/NUMREG.va" />
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/TestFiles/S_PAYLOAD.ls" />
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/TestFiles/SYSFRAME.va" />
     <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/POSREG.va">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/SYSFRAME.VA">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_TCONLINE.LS">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_9_AUS_T1.LS">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="1122">
-          <caret line="66" column="44" lean-forward="true" selection-start-line="66" selection-start-column="44" selection-end-line="66" selection-end-column="44" />
+          <caret line="66" column="25" selection-start-line="66" selection-start-column="25" selection-end-line="66" selection-end-column="25" />
         </state>
       </provider>
     </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/NUMREG.va">
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/TC_ONLINE.LS">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2805">
-          <caret line="165" column="18" lean-forward="true" selection-start-line="165" selection-start-column="18" selection-end-line="165" selection-end-column="18" />
+        <state relative-caret-position="1377">
+          <caret line="81" column="37" lean-forward="true" selection-start-line="81" selection-start-column="37" selection-end-line="81" selection-end-column="37" />
         </state>
       </provider>
     </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/100157-40-03/Robot_2/MC/NUMREG.va">
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_INIT.LS">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="374">
-          <caret line="22" column="32" lean-forward="true" selection-start-line="22" selection-start-column="32" selection-end-line="22" selection-end-column="32" />
+        <state relative-caret-position="1343">
+          <caret line="79" lean-forward="true" selection-start-line="79" selection-end-line="79" />
         </state>
       </provider>
     </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/100157-40-03/Robot_2/MC/O_J_3_HOCH_20120914.LS">
+    <entry file="file://$PROJECT_DIR$/upload.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="10200">
+          <caret line="607" column="37" selection-start-line="607" selection-start-column="37" selection-end-line="607" selection-end-column="37" />
+          <folding>
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/WAIT_DI.LS">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="255">
+          <caret line="15" column="24" lean-forward="true" selection-start-line="15" selection-start-column="24" selection-end-line="15" selection-end-column="24" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_VPINIT.LS">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/100157-40-03/Robot_2/MC/J_3_HOCH_20120914.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="4437">
-          <caret line="261" column="79" selection-start-line="261" selection-start-column="79" selection-end-line="261" selection-end-column="79" />
-        </state>
-      </provider>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/GR_ZKG_AUF.LS">
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/100157-40-03/Robot_2/MC/J_4_NACH.LS">
+    <entry file="file://$PROJECT_DIR$/convertva.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="13991">
-          <caret line="823" column="4" selection-start-line="823" selection-start-column="4" selection-end-line="823" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/100157-40-03/Robot_2/MC/J_1_PICK.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1071">
-          <caret line="63" column="9" lean-forward="true" selection-start-line="63" selection-start-column="9" selection-end-line="63" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/100157-40-03/Robot_2/MC/POSREG.va">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="340">
-          <caret line="20" column="30" lean-forward="true" selection-start-line="20" selection-start-column="30" selection-end-line="20" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_3A_FTP_Z.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="578">
-          <caret line="34" column="9" lean-forward="true" selection-start-line="34" selection-start-column="9" selection-end-line="34" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/AOA/PROG1.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="170">
-          <caret line="10" column="19" selection-start-line="10" selection-start-column="19" selection-end-line="10" selection-end-column="19" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/ProjekteDennis/1111272/Vorlage Stasiek/2018_03_12/ascii/T1_PR_INIT.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2448">
-          <caret line="144" column="14" selection-start-line="144" selection-start-column="6" selection-end-line="144" selection-end-column="14" />
+        <state relative-caret-position="8228">
+          <caret line="488" column="10" selection-start-line="488" selection-start-column="5" selection-end-line="488" selection-end-column="10" />
+          <folding>
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/JOB_0.LS">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/P_HOME.LS">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_FEHLER.LS">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_VORBED.LS">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_START.LS">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="918">
-          <caret line="54" column="9" lean-forward="true" selection-start-line="54" selection-start-column="9" selection-end-line="54" selection-end-column="9" />
+        <state relative-caret-position="561">
+          <caret line="66" column="22" selection-start-line="66" selection-start-column="22" selection-end-line="66" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_PAYLOAD.LS">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_3A_FTP_Z_T1.LS">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="85">
+          <caret line="29" column="41" lean-forward="true" selection-start-line="29" selection-start-column="41" selection-end-line="29" selection-end-column="41" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_OVERRD.LS">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="612">
+          <caret line="36" column="28" lean-forward="true" selection-start-line="36" selection-start-column="28" selection-end-line="36" selection-end-column="28" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/IntermediateUpload.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="306">
+          <caret line="388" column="14" selection-start-line="388" selection-start-column="4" selection-end-line="388" selection-end-column="14" />
+          <folding>
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/PNS0001.LS">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="157">
-          <caret line="53" column="33" selection-start-line="53" selection-start-column="31" selection-end-line="53" selection-end-column="33" />
+        <state relative-caret-position="648">
+          <caret line="57" column="44" selection-start-line="57" selection-start-column="44" selection-end-line="57" selection-end-column="44" />
         </state>
       </provider>
     </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_3A_FTP_Z_T1.LS">
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_4_TR_T1.LS">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="472">
-          <caret line="52" column="12" selection-start-line="52" selection-start-column="12" selection-end-line="52" selection-end-column="12" />
-        </state>
+        <state relative-caret-position="-2442" />
       </provider>
     </entry>
-    <entry file="file://F:/Dennis/ProjekteDennis/Untersuchung_DMAX/Robotersimulation/Programm/Bin1_HD-Lanzen.ls">
+    <entry file="file://$PROJECT_DIR$/uploadsum.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-204" />
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/ProjekteDennis/Untersuchung_DMAX/Robotersimulation/Programm/PNS0001.ls">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="102">
-          <caret line="6" column="43" selection-start-line="6" selection-end-line="6" selection-end-column="43" />
+        <state relative-caret-position="537">
+          <caret line="54" selection-start-line="54" selection-end-line="54" />
+          <folding>
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/uploadva.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1649">
-          <caret line="101" column="10" selection-start-line="101" selection-start-column="4" selection-end-line="101" selection-end-column="10" />
+        <state relative-caret-position="962">
+          <caret line="182" column="45" selection-start-line="182" selection-start-column="31" selection-end-line="182" selection-end-column="45" />
+          <folding>
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://F:/Dennis/VisualComponents/ImportRepo/Importer/FANUCLS/download.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="748">
+          <caret line="217" column="14" selection-start-line="217" selection-start-column="7" selection-end-line="217" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/TestFiles/J_4_TR_T1.ls">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-2211" />
+      </provider>
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/TestFiles/POSREG.va">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-153">
+          <caret column="5" selection-start-column="5" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/IntermediateConvert.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="544">
+          <caret line="514" column="35" selection-start-line="514" selection-start-column="35" selection-end-line="514" selection-end-column="35" />
+          <folding>
+            <element signature="e#0#23#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/TestFiles/PNS0001.ls">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/VisualComponents_Fanuc_Importer_Test/Robot_1/MC/TestFiles/Untitled.va">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1037">
+          <caret line="61" column="35" lean-forward="true" selection-start-line="61" selection-start-column="35" selection-end-line="61" selection-end-column="35" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/convert.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1989">
+          <caret line="288" lean-forward="true" selection-start-line="288" selection-end-line="288" />
           <folding>
             <element signature="e#0#23#0" expanded="true" />
           </folding>
@@ -545,78 +523,10 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/download.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3570">
-          <caret line="218" column="22" selection-start-line="218" selection-start-column="22" selection-end-line="218" selection-end-column="22" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/convert.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2941">
-          <caret line="177" column="40" selection-start-line="177" selection-start-column="23" selection-end-line="177" selection-end-column="40" />
+        <state relative-caret-position="547">
+          <caret line="444" column="73" selection-start-line="444" selection-start-column="73" selection-end-line="444" selection-end-column="73" />
           <folding>
-            <element signature="e#0#23#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/convertva.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1547">
-          <caret line="95" column="20" selection-start-line="95" selection-start-column="20" selection-end-line="95" selection-end-column="20" />
-          <folding>
-            <element signature="e#0#23#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="68">
-          <caret line="4" selection-start-line="4" selection-end-line="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/../ABBMOD/convert.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2839">
-          <caret line="169" column="28" selection-start-line="169" selection-start-column="28" selection-end-line="169" selection-end-column="28" />
-          <folding>
-            <element signature="e#0#23#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/J_1_EIN.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="850">
-          <caret line="50" column="30" lean-forward="true" selection-start-line="50" selection-start-column="30" selection-end-line="50" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://F:/Dennis/Roboguide/MyWorkcells/1111259/Robot_1/MC/AOA/S_FEHLER.LS">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="253">
-          <caret line="450" column="27" selection-start-line="450" selection-start-column="27" selection-end-line="450" selection-end-column="27" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/IntermediateUpload.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="248">
-          <caret line="125" column="35" selection-start-line="125" selection-start-column="35" selection-end-line="125" selection-end-column="35" />
-          <folding>
-            <element signature="e#0#23#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/upload.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="530">
-          <caret line="269" column="15" selection-start-line="269" selection-start-column="15" selection-end-line="269" selection-end-column="15" />
-          <folding>
-            <element signature="e#0#23#0" expanded="true" />
+            <element signature="e#81#108#0" expanded="true" />
           </folding>
         </state>
       </provider>

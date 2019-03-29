@@ -149,6 +149,10 @@ def getStatement(line,filestring):
     statement_type_="Tool"
     data_=getGlobTool(line)
     return [statement_type_,data_]
+  elif re.findall("UFRAME",line):
+    statement_type_="Frame"
+    data_=getGlobFrame(line)
+    return [statement_type_,data_]
   elif re.findall(r"(?P<var_type>[a-zA-Z/!]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket+eq,line):
     statement_type_="SetVariable"
     data_=getSetVariable(line)
@@ -178,6 +182,7 @@ def getMovementData(line_,filestring_,type_):
   #read in speed and coordinates
   if posname:
     point_="P["+posname.group('pnum')+"]"
+
     speed_=getSpeed(line_,type_)
     for lineFindPos in filestring_.split('\n'):
       FindPosMatch=re.findall('P'+obracket+posname.group('pnum')+cbracket+obrace,lineFindPos)
@@ -212,6 +217,7 @@ def getMovementData(line_,filestring_,type_):
   elif re.search(prnum,line_):
     posr_name_=re.search(prnum,line_)
     point_="PR["+posr_name_.group('pnum') + posr_name_.group('comment')+"]"
+    speed_=getSpeed(line_,type_)
   if re.findall("Tool_Offset,PR",line_):
     offset_data_=getToolOffset(line_)
 
@@ -238,7 +244,7 @@ def getToolOffset(line):
 
 def getSpeed(line_, type_):
   speed_data=["",""]
-  if re.search(r"R" + obracket, line_):
+  if re.search(r" R" + obracket, line_):
 
     speed_ = re.search(rnum, line_)
     if speed_:
@@ -248,8 +254,11 @@ def getSpeed(line_, type_):
       speed_data[0] = register
       speed_data[1] = comment.split("]")[0]
   elif type_=="joint":
+
+
     speed_ = re.search(r"(?P<speed>[a-zA-Z0-9_]+)%", line_)
     speed_data[0] = speed_.group('speed')
+    print "speed %s" % speed_data[0]
       #acc?
   elif type_ == "lin":
     speed_ = re.search(r"(?P<speed>[a-zA-Z0-9_]+)mm", line_)
@@ -362,7 +371,7 @@ def getSetDO(line):
   return set_data
 
 def getComment(line):
-  commentString = re.search("!(?P<comment>[a-zA-Z0-9_\-\s\:\/\=\>\[\]\.\,]+)", line)
+  commentString = re.search("!(?P<comment>[a-zA-Z0-9_\-\s\:\/\=\>\[\]\.\,\(\)\!]+)", line)
   comment_=commentString.group('comment')
   return comment_
 
@@ -395,7 +404,6 @@ def getSelect(line,filestring):
 
     if (line_nr_ == getLineNr(line_select_) and in_select_==0) or  (in_select_==1 and select_choices_):
       case_number.append(select_choices_.group('Nr'))
-      print "case %s" %getIf(line_select_)
       cases.append(getIf(line_select_))
 
       if in_select_==1:
@@ -404,6 +412,10 @@ def getSelect(line,filestring):
       continue
 
   return [cases,case_number,selse]
+
+def getGlobFrame(line):
+  tool_def_=re.search("UFRAME_NUM"+eq+"(?P<Nr>[0-9_]+)",line)
+  return tool_def_.group('Nr')
 
 def getGlobTool(line):
   tool_def_=re.search("UTOOL_NUM"+eq+"(?P<Nr>[0-9_]+)",line)
@@ -487,7 +499,7 @@ def getJMP(line):
   jmp_data_=""
   if JmpLblGroup:
     JmpLbl = JmpLblGroup.group('JmpLbl')
-    JmpLblNrGroup = re.search("LBL" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)", JmpLbl)
+    JmpLblNrGroup = re.search("LBL" + obracket + "(?P<Nr>[a-zA-Z0-9\[\]_]+)"+cbracket, JmpLbl)
     jmp_data_ = JmpLblNrGroup.group('Nr')
   return jmp_data_
 
@@ -535,7 +547,7 @@ def getMessage(line):
   message=""
 
   if message_def_:
-    message=message_def_.group(0)
+    message=message_def_.group(0)[8:len(message_def_.group(0))-2]
   return message
 
 def setLineSkip():

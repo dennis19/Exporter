@@ -77,7 +77,8 @@ lnum = r'\s*(?P<lnum>'+integer+')' + colon
 app_ = getApplication()
 depth=0
 
-glob_tool_=0
+glob_tool_=""
+glob_frame_=""
 def cleanUp():
   setNextState(None)
 
@@ -116,22 +117,24 @@ def upload_programs(program_,infile,filename_):
   file_length_ = len(os.path.basename(filename_))
   rob_cnt_ = executor_.Controller
 
-
   # read in lines of file
   for line_ in filestring_.split('\n'):
 
     prog_ = re.match(r'/PROG' + sp + galphanum + '(?:\s+Macro)?' + end, line_)
     # create routine for file, if not there yet
     if prog_:
+
       progname_ = prog_.group(1)
       print "Prog:%s" % progname_
       program_.deleteRoutine(progname_)
       if progname_ == 'PNS0001':
         routine_ = program_.MainRoutine
+        routine_.Name='PNS0001'
       else:
         routine_ = program_.findRoutine(progname_)
         if not routine_:
           routine_ = program_.addRoutine(progname_)
+
       if len(routine_.Statements)>=3:
         routine_.clear()
       ###continue
@@ -230,6 +233,7 @@ def OnStart():
       program_.deleteRoutine(progname_)
       if progname_ == 'PNS0001':
         routine_ = program_.MainRoutine
+        routine_.Name='PNS0001'
       else:
         routine_ = program_.findRoutine(progname_)
         if not routine_:
@@ -324,6 +328,10 @@ def createStatement(line,robCnt,routine,program,scope,statement_data_):
     setGlobTool(statement_data_[1])
     depth = depth - 1
     return None
+  elif statement_data_[0]=="Frame":
+    setGlobFrame(statement_data_[1])
+    depth = depth - 1
+    return None
   elif statement_data_[0]=="SetVariable":
     s= createAssignStatement(routine,scope,statement_data_[1])
     depth = depth - 1
@@ -346,16 +354,21 @@ def setGlobTool(tool_data_):
   global glob_tool_
   glob_tool_=tool_data_
 
+def setGlobFrame(frame_data):
+  global glob_frame_
+  glob_frame_ = frame_data
+
 #find PosName
 def readPos(s,robCnt,type,program,move_data_):
-  global glob_tool_
+  global glob_tool_, glob_frame_
   exec_ = program.Executor
   rob_cnt_ = exec_.Controller
   kin_ = rob_cnt_.Kinematics
   comp_ = kin_.Component
   if type=="joint":
     if move_data_[1][1] == "":
-      s.JointSpeed = int(move_data_[1][0])/100
+
+      s.JointSpeed = float(move_data_[1][0])/(100)
     else:
       if comp_.getProperty("R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])):
         s.JointSpeed = int(comp_.getProperty("R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])).Value) / 100
@@ -380,18 +393,35 @@ def readPos(s,robCnt,type,program,move_data_):
   posFrame.PositionInReference = m
   posFrame.Name = move_data_[0]
   posFrame.Configuration = move_data_[3]
-  if move_data_[4]== 0:
-    s.Base = robCnt.Bases[0]
-  else:
-    s.Base = robCnt.Bases[move_data_[4]-1]
+
   #endif
-  if move_data_[5] == 0:
-    s.Tool = robCnt.Tools[0]
+
+
+  if not glob_tool_ == "":
+    if glob_tool_=="0":
+      s.Tool=rob_cnt_.Tools[0]
+    else:
+      s.Tool = rob_cnt_.Tools[int(glob_tool_) - 1].Name
   else:
-    s.Tool = robCnt.Tools[move_data_[5]-1].Name
+    if move_data_[4] == 0:
+      s.Tool = rob_cnt_.Tools[0]
+    else:
+      s.Tool = rob_cnt_.Tools[move_data_[4] - 1]
+
+  if not glob_frame_ == "":
+    if glob_frame_=="0":
+      s.Base=rob_cnt_.Bases[0]
+    else:
+      s.Base = rob_cnt_.Bases[int(glob_frame_) - 1].Name
+  else:
+    if move_data_[5] == 0:
+      s.Base = rob_cnt_.Bases[0]
+    else:
+      s.Base = rob_cnt_.Bases[move_data_[5] - 1].Name
 
 
 def createToolOffset(program,routine_,scope_,move_data_):
+  global glob_tool_,glob_frame_
   exec_ = program.Executor
   rob_cnt_ = exec_.Controller
   kin_ = rob_cnt_.Kinematics
@@ -399,6 +429,7 @@ def createToolOffset(program,routine_,scope_,move_data_):
   callRoutine = program.findRoutine("POSREG_"+move_data_[6][0] )
 
   if callRoutine:
+
     offset_vec_vc_=vcMatrix.new()
     offset_statement_=callRoutine.Statements[0]
     offset_vec_=offset_statement_.Positions[0].PositionInReference.P
@@ -434,16 +465,36 @@ def createToolOffset(program,routine_,scope_,move_data_):
 
   s = addStatement(scope_, routine_, 'Process')
 
+  s.createProperty(VC_STRING, "Position")
+  s.createProperty(VC_STRING, "Register")
+  s.createProperty(VC_STRING, "Speed")
+
+  s.getProperty('Position').Value = move_data_[6][1]
+  s.getProperty('Register').Value = move_data_[6][0]
+  s.getProperty('Speed').Value = str(move_data_[1][0])
+
   ph_ = comp_.createBehaviour('rPythonProcessHandler', 'ToolOffset')
   pos=s.createPosition(move_data_[6][1])
+
   ph_.Script = TOOL_OFFSET_SCRIPT()
   s.Process = ph_
   s.Name = 'ToolOffset'
-  s.Base=base
-  if not glob_tool_ == 0:
-    s.Tool = rob_cnt_.Tools[int(glob_tool_)-1].Name
+  #s.Base=base
+  if not glob_tool_ == "":
+    if glob_tool_=="0":
+      s.Tool=rob_cnt_.Tools[0]
+    else:
+      s.Tool = rob_cnt_.Tools[int(glob_tool_) - 1].Name
   else:
     s.Tool = pos_statement_.Tool
+
+  if not glob_frame_ == "":
+    if glob_frame_=="0":
+      s.Base=rob_cnt_.Bases[0]
+    else:
+      s.Base = rob_cnt_.Bases[int(glob_frame_) - 1].Name
+  else:
+    s.Base = base
 
   pos.PositionInReference = pos_
   return s
@@ -553,6 +604,8 @@ def createWaitDI(routine,scope,wait_data):
         wait_data[0][i] = "Flags::F"
       elif wait_data[0][i]=="R":
         wait_data[0][i] = "Registers::R"
+      elif wait_data[0][i] == "R":
+        wait_data[0][i] = "RobotInput::RI"
       elif wait_data[0][i] == "DI":
         wait_data[0][i] = "IN"
       var_value_[i]=wait_data[2][i]
@@ -714,6 +767,29 @@ def createAssignStatement(routine,scope,set_var_data_):
 
     var_=set_var_data_[0]+set_var_data_[1]+uploadva.delChars(set_var_data_[2])
     value_ = set_var_data_[3] + set_var_data_[4] + uploadva.delChars(set_var_data_[5])
+
+    if re.findall('R'+ "(?P<Nr>[0-9_]+)", var_):
+      var_ = "Registers::" + var_
+    elif re.findall('RI' + "(?P<Nr>[0-9_]+)", var_):
+      var_ = "RobotInput::"+ var_
+    elif re.findall('UO' + "(?P<Nr>[0-9_]+)", var_):
+      var_ = "UserOutput::" + var_
+    elif re.findall('UI' + "(?P<Nr>[0-9_]+)", var_):
+      var_ = "UserInput::" + var_
+    elif re.findall('F' + "(?P<Nr>[0-9_]+)", var_):
+      var_= "Flags::" +var_
+    elif re.findall ('SI'+"(?P<Nr>[0-9_]+)",var_):
+      var_= "SafeInput::"+var_
+    elif re.findall('SO' + "(?P<Nr>[0-9_]+)", var_):
+      var_ = "SafeOutput::"+var_
+    elif re.findall('M' + "(?P<Nr>[0-9_]+)", var_):
+      var_ = "Merker::" + var_
+    elif re.findall('GO' + "(?P<Nr>[0-9_]+)", var_):
+      var_ = "GroupOutput::"+var_
+    elif re.findall('GI' + "(?P<Nr>[0-9_]+)", var_):
+      var_ = "GroupInput::"+var_
+
+
     if re.findall("ON",value_):
       value_=1
     elif re.findall("OFF",value_):
@@ -722,6 +798,26 @@ def createAssignStatement(routine,scope,set_var_data_):
       value_=routine.getProperty("Parameter_1").Name
     elif value_ == "AR2":
       value_ = routine.getProperty("Parameter_2").Name
+    elif re.findall('R'+ "(?P<Nr>[0-9_]+)", value_):
+      print "variable %s" % value_
+    elif re.findall('RI' + "(?P<Nr>[0-9_]+)", value_):
+      value_ = "RobotInput::"+ value_
+    elif re.findall('UO' + "(?P<Nr>[0-9_]+)", value_):
+      value_ = "UserOutput::" + value_
+    elif re.findall('UI' + "(?P<Nr>[0-9_]+)", value_):
+      value_ = "UserInput::" + value_
+    elif re.findall('F' + "(?P<Nr>[0-9_]+)", value_):
+      value_= "Flags::" +value_
+    elif re.findall ('SI'+"(?P<Nr>[0-9_]+)",value_):
+      value_= "SafeInput::"+value_
+    elif re.findall('SO' + "(?P<Nr>[0-9_]+)", value_):
+      value_ = "SafeOutput::"+value_
+    elif re.findall('M' + "(?P<Nr>[0-9_]+)", value_):
+      value_ = "Merker::" + value_
+    elif re.findall('GI' + "(?P<Nr>[0-9_]+)", value_):
+      value_ = "GroupInput::" + value_
+    elif re.findall('GO' + "(?P<Nr>[0-9_]+)", value_):
+      value_ = "GroupOutput::" + value_
     s.TargetProperty = str(var_)
     s.ValueExpression= str(value_)
     return s
@@ -751,6 +847,13 @@ def makeConodition(line,if_sel_,statement,if_data_):
       comment_property="Comment%s"%condition_[2]
       statement.createProperty(VC_STRING,comment_property)
       statement.getProperty(comment_property).Value=condition_[3]
+    elif re.findall('DO',condition_[0]):
+      condition_[0] = 'OUT[' + condition_[2] + ']'
+      comment_property="Comment%s"%condition_[2]
+      statement.createProperty(VC_STRING,comment_property)
+      statement.getProperty(comment_property).Value=condition_[3]
+    elif re.findall('AR' + obracket, condition_[0]+condition_[1]):
+      condition_[0]=statement.ParentRoutine.getProperty("Parameter_%s" %condition_[2]).Name
     elif re.findall('R' + obracket, condition_[0]+condition_[1]):
       condition_[3]=uploadva.delChars(condition_[3])
       condition_[0] = "Registers::" + condition_[0]+condition_[2]+condition_[3]
@@ -768,7 +871,13 @@ def makeConodition(line,if_sel_,statement,if_data_):
       condition_[0]= "Flags::" +condition_[0]+condition_[2]+condition_[3]
     elif re.findall ('SI'+obracket,condition_[0]+condition_[1]):
       condition_[3]=uploadva.delChars(condition_[3])
-      condition_[0]= condition_[0]+condition_[2]+condition_[3]
+      condition_[0]= "SafeInput::"+condition_[0]+condition_[2]+condition_[3]
+    elif re.findall('SO' + obracket, condition_[0] + condition_[1]):
+      condition_[3] = uploadva.delChars(condition_[3])
+      condition_[0] = "SafeOutput::"+condition_[0] + condition_[2] + condition_[3]
+    elif re.findall('M' + obracket, condition_[0] + condition_[1]):
+      condition_[3] = uploadva.delChars(condition_[3])
+      condition_[0] = "Merker::" + condition_[0] + condition_[2] + condition_[3]
     elif condition_[0] == "AND":
       condition_[0] = '&&'
     elif condition_[0] == "OR":

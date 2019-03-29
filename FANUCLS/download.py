@@ -8,6 +8,24 @@ import re, time, os, os.path
 #-------------------------------------------------------------------------------
 # This is to keep all numeric conversions consistent across platform locales.
 import locale
+import convert
+sp = r'\s+'
+eq = r'\s*=\s*'
+comma = r'\s*,\s*'
+colon = r'\s*:\s*'
+semicolon = r'\s*;\s*'
+obracket = r'\s*\[\s*'
+cbracket = r'\s*\]\s*'
+orbracket = r'\s*\(\s*'
+crbracket = r'\s*\)\s*'
+obrace = r'\s*\{\s*'
+cbrace = r'\s*\}\s*'
+integer = r'-?\d+'
+ginteger = r'('+integer+')'
+real = r'-?\d*\.?\d+(?:[eE][-+]?\d+)?'
+greal = r'('+real+')'
+alphanum = r'[a-zA-Z]+\w*'
+galphanum = r'('+alphanum+')'
 locale.setlocale(locale.LC_NUMERIC,'C')
 #-------------------------------------------------------------------------------
 app = getApplication()
@@ -136,6 +154,128 @@ def GetStatementCount( note ):
 
   return sc
 #-------------------------------------------------------------------------------
+def writePosReg(program,filename):
+  i=1
+  try:
+    ls = open(filename,"w")
+  except:
+    print "Cannot open file \'%s\' for writing" % filename
+    return False
+
+  line="[*POSREG*]$POSREG  Storage: CMOS  Access: RW  : ARRAY[1,100] OF Position Reg\n"
+  while i<=100:
+    pos_reg_defined=0
+    for routine in program.Routines:
+      j="%s" %i
+      if re.search("POSREG_PR"+obracket+j+'(?P<comment>(?:\s*:.*)?)'+cbracket,routine.Name):
+        pos_reg_def=re.search("POSREG_PR"+obracket+j+'(?P<comment>(?:\s*:.*)?)'+cbracket,routine.Name)
+        comment_=pos_reg_def.group("comment")[1:len(pos_reg_def.group("comment"))]
+        pos_reg_defined=1
+        pos_=routine.Statements[0].Positions[0]
+        xx = pos_.PositionInReference.P.X
+        yy = pos_.PositionInReference.P.Y
+        zz = pos_.PositionInReference.P.Z
+        ww = pos_.PositionInReference.WPR.X
+        pp=pos_.PositionInReference.WPR.Y
+        rr = pos_.PositionInReference.WPR.Z
+        conf = convert.getConfig(routine.Statements[0])
+
+        #print "name %s" % comment_
+
+
+        line += "    [1,%s] = '%s'\n" \
+                "  Group: 1 Config: %s\n" \
+                "  X: %s  Y: %s  Z: %s\n" \
+                "  W: %s  P: %s  R: %s\n" % (i,comment_,conf, xx, yy, zz, ww, pp, rr)
+
+        #print "name %s" %routine.Name
+        break
+      #elif re.match
+
+    if not pos_reg_defined==1:
+      line +="    [1,%s] = '' Uninitialized\n" %i
+    i=i+1
+
+
+  ls.write('%s\n' %line)
+  ls.close
+
+def writeSysFrame(controller_,name,filename):
+  #lsnote = comp.findBehaviour(name)
+  # if not lsnote:
+  #   return False
+  #endif
+  print "filename :%s" %filename
+  try:
+    ls = open(filename,"w")
+  except:
+    print "Cannot open file \'%s\' for writing" % filename
+    return False
+
+  line="[*SYSTEM*]$MNUFRAME  Storage: CMOS  Access: RW  : ARRAY[1,9] OF POSITION\n"
+  bases=controller_.Bases
+  i=0
+  while i<=len(bases)-1:
+    xx = bases[i].PositionMatrix.P.X
+    yy = bases[i].PositionMatrix.P.Y
+    zz = bases[i].PositionMatrix.P.Z
+    ww = bases[i].PositionMatrix.WPR.X
+    pp = bases[i].PositionMatrix.WPR.Y
+    rr = bases[i].PositionMatrix.WPR.Z
+    line += "    [1,%s] = \n" \
+            "  Group: 1 Config: N D B, 0, 0, 0\n" \
+            "  X: %s  Y: %s  Z: %s\n" \
+            "  W: %s  P: %s  R: %s\n" % (i+1, xx, yy, zz, ww, pp, rr)
+
+    #print "bases %s" %bases[i].Name
+    #line+="  [1,%s] = \n" %i
+    i+=1
+  line+="[*SYSTEM*]$MNUFRAMENUM  Storage: CMOS  Access: RW  : ARRAY[1] OF BYTE\n" \
+        "  [1] =%s\n"%i
+  line+="[*SYSTEM*]$MNUTOOL  Storage: CMOS  Access: RW  : ARRAY[1,10] OF POSITION\n"
+  tools=controller_.Tools
+  i=0
+  while i<=len(tools)-1:
+    xx=tools[i].PositionMatrix.P.X
+    yy=tools[i].PositionMatrix.P.Y
+    zz=tools[i].PositionMatrix.P.Z
+    ww=tools[i].PositionMatrix.WPR.X
+    pp=tools[i].PositionMatrix.WPR.Y
+    rr=tools[i].PositionMatrix.WPR.Z
+    #print "tools %s" %tools[i].Name
+    line += "    [1,%s] = \n" \
+            "  Group: 1 Config: N D B, 0, 0, 0\n" \
+            "  X: %s  Y: %s  Z: %s\n" \
+            "  W: %s  P: %s  R: %s\n" % (i+1,xx,yy,zz,ww,pp,rr)
+    i+=1
+  line+="[*SYSTEM*]$MNUTOOLNUM  Storage: CMOS  Access: RW  : ARRAY[1] OF BYTE\n"\
+  "[1] = %s\n"%i
+  ls.write('%s\n' %line)
+  ls.close
+
+def WriteRegisterBody(routine,name,filename):
+  lsnote = comp.findBehaviour(name)
+  if not lsnote:
+    return False
+  #endif
+  #print "filename :%s" %filename
+  try:
+    ls = open(filename,"w")
+  except:
+    print "Cannot open file \'%s\' for writing" % filename
+    return False
+
+  td = time.strftime("DATE %y-%m-%d  TIME %H:%M:%S")
+  for line in lsnote.Note.split('\n'):
+    #print "line %s" % line
+    if line[:8] == 'MODIFIED':
+      line = "MODIFIED \t= %s;" % td
+    elif line[:10] == 'LINE_COUNT':
+      line = "LINE_COUNT \t= %i;" % GetStatementCount( lsnote )
+    #endif
+    ls.write( '%s\n' % line )
+  ls.close
+  return True
 
 def WriteProgramBody( routine, name, filename ):
   global statementCount, groups
@@ -159,6 +299,7 @@ def WriteProgramBody( routine, name, filename ):
     elif line[:10] == 'LINE_COUNT':
       line = "LINE_COUNT \t= %i;" % GetStatementCount( lsnote )
     #endif
+
     ls.write( '%s\n' % line )
   #endfor
   #
@@ -205,26 +346,64 @@ def OnStart():
     return
   #endif
 
+
   program = routine.Program
   executor = program.Executor
   comp = executor.Component
   controller = executor.Controller
+  routine=program.MainRoutine
+  VAfilter = "FANUC LS Robot Program file (*.va)|*.va"
+  LSfilter = "FANUC LS Robot Program file (*.ls)|*.ls"
+  ok = True
 
-  # Ask user to select file, where PE will be dumped
+  #writePosReg(program)
+
+
+  #save1 = app.findCommand("dialogSaveFile")
   save = app.findCommand("dialogSaveFile")
   uri = getValue( comp, "Filename", "", VC_URI, "Download" )
-  ok = True
-  LSfilter = "FANUC LS Robot Program file (*.ls)|*.ls"
-  save.execute(uri,ok,LSfilter,'Choose File to save FANUC LS Robot Program file')
+  save.execute(uri, ok, VAfilter, 'SYSFRAME')
   if not save.Param_2:
     print "No file selected for saving, aborting command"
     return
   #endif
 
+
   uri = save.Param_1
   uri = uri[8:]
 
   head, tail = os.path.split(uri)
+
+  name='SYSFRAME'
+  filename = head + "\\" + name + ".va"
+  #print "filename %s" % filename
+
+  #print "note %s" %comp.findBehavioursByType(VC_NOTE)[i].Name
+  writeSysFrame(controller,name,filename)
+  #os.startfile(filename)
+
+  name='POSREG'
+  filename = head + "\\" + name + ".va"
+  print "filename %s" % filename
+  #
+  writePosReg(program,filename)
+  #os.startfile(filename)
+  #uri = getValue(comp, "Filename", "", VC_URI, "Download")
+
+  # Ask user to select file, where PE will be dumped
+
+
+
+  if comp. findBehavioursByType(VC_NOTE):
+    i=0
+    while i<=len(comp.findBehavioursByType(VC_NOTE))-1:
+      if comp.findBehavioursByType(VC_NOTE)[i].Name=="NUMREG":
+        name=comp.findBehavioursByType(VC_NOTE)[i].Name
+        filename = head + "\\" + name + ".va"
+        WriteRegisterBody(routine,comp.findBehavioursByType(VC_NOTE)[i].Name,filename)
+        #os.startfile(filename)
+      i+=1
+
   mainName = tail[:len(tail)-3]
 
   motiontarget = controller.createTarget()
@@ -251,7 +430,8 @@ def OnStart():
   # main routine
 
   if routine == program.MainRoutine:
-    if not WriteProgramBody( program.MainRoutine, mainName, uri  ):
+    filename=head + "\\" + routine.Name + ".ls"
+    if not WriteProgramBody( program.MainRoutine, mainName, filename ):
       print "RSL to FANUC FAILED at MAIN" 
       return
     #endif
@@ -261,8 +441,11 @@ def OnStart():
       name = routine.Name
       filename = head + "\\" + name + ".ls"
       if not WriteProgramBody( routine, name,  filename ):
-        print "RSL to FANUC FAILED at routine: %s" % name
-        return
+        if re.findall("POSREG_PR",name):
+          print "Position Register(%s) routines are not translated" %name
+        else:
+          print "RSL to FANUC FAILED at routine: %s" % name
+        #return
       #endif
     #endfor
     print "RSL to FANUC Successfully Written to: ", uri 
@@ -278,7 +461,7 @@ def OnStart():
     #endif
     print "RSL to FANUC Successfully Written to: ", filename 
 
-    os.startfile(filename)
+    #os.startfile(filename)
   #endif
 
   return

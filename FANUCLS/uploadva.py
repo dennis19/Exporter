@@ -345,6 +345,17 @@ def delChars(comment_):
 
       comment_ += comment_split_[i - 1]
       i = i + 1
+
+  #delete .
+  split_char_ = re.compile(r'\.')
+  comment_split_ = split_char_.split(comment_)
+  if comment_split_:
+    i = 1
+    comment_ = ''
+    while i <= len(comment_split_):
+
+      comment_ += comment_split_[i - 1]
+      i = i + 1
   return comment_
 
 

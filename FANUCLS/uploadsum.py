@@ -29,6 +29,11 @@ riregister = "RI"+obracket+ginteger+cbracket+" "+"(?P<value>[a-zA-Z]+)"+"  "+"(?
 flgregister = "FLG"+obracket+ginteger+cbracket+" "+"(?P<value>[a-zA-Z]+)"+"  "+"(?P<comment>[a-zA-Z0-9_\-\s\:\.]+)"
 uoregister = "UO"+obracket+ginteger+cbracket+" "+"(?P<value>[a-zA-Z]+)"+"  "+"(?P<comment>[a-zA-Z0-9_\-\s\:\.\*]+)"
 uiregister = "UI"+obracket+ginteger+cbracket+" "+"(?P<value>[a-zA-Z]+)"+"  "+"(?P<comment>[a-zA-Z0-9_\-\s\:\.\*]+)"
+goregister = "GOUT"+obracket+ginteger+cbracket+" "+"(?P<value>[0-9]+)"+"  "+"(?P<comment>[a-zA-Z0-9_\-\s\:\.\*]+)"
+giregister = "GIN"+obracket+ginteger+cbracket+" "+"(?P<value>[0-9]+)"+"  "+"(?P<comment>[a-zA-Z0-9_\-\s\:\.\*]+)"
+soregister = "SO"+obracket+ginteger+cbracket+" "+"(?P<value>[a-zA-Z]+)"+"  "+"(?P<comment>[a-zA-Z0-9_\-\s\:\.\*]+)"
+siregister = "SI"+obracket+ginteger+cbracket+" "+"(?P<value>[a-zA-Z]+)"+"  "+"(?P<comment>[a-zA-Z0-9_\-\s\:\.\*]+)"
+mrkregister = "MRK"+obracket+ginteger+cbracket+" "+"(?P<value>[a-zA-Z]+)"+"  "+"(?P<comment>[a-zA-Z0-9_\-\s\:\.\*]+)"
 
 ro_="RO"+obracket
 ri_="RI"+obracket
@@ -147,6 +152,67 @@ def uploadsum_(program,infile):
         prop.Group = nindex
       continue
 
+    SOREG_ = re.search(soregister, line)
+    if SOREG_:
+      val = SOREG_.group('value')
+      if val == 'ON':
+        val = 1
+      elif val == 'OFF':
+        val = 0
+      comment=uploadva.delChars(SOREG_.group('comment'))
+      if val or comment:
+        nindex = eval(SOREG_.group(1))
+        prop = comp.createProperty(VC_REAL, 'SafeOutput::SO%i' % nindex + '%s' % comment)
+        prop.Value = val
+        prop.Group = nindex
+      continue
+
+    SIREG_ = re.search(siregister, line)
+    if SIREG_:
+      val = SIREG_.group('value')
+      if val == 'ON':
+        val = 1
+      elif val == 'OFF':
+        val = 0
+      comment=uploadva.delChars(SIREG_.group('comment'))
+      if val or comment:
+        nindex = eval(SIREG_.group(1))
+        prop = comp.createProperty(VC_REAL, 'SafeInput::SI%i' % nindex + '%s' % comment)
+        prop.Value = val
+        prop.Group = nindex
+      continue
+
+    GOREG_ = re.search(goregister, line)
+    if GOREG_:
+      val = GOREG_.group('value')
+      if val == 'ON':
+        val = 1
+      elif val == 'OFF':
+        val = 0
+      comment=uploadva.delChars(GOREG_.group('comment'))
+      if val or comment:
+        nindex = eval(GOREG_.group(1))
+        prop = comp.createProperty(VC_REAL, 'GroupOutput::GO%i' % nindex + '%s' % comment)
+        prop.Value = int(val)
+        prop.Group = nindex
+      continue
+
+    GIREG_ = re.search(giregister, line)
+    if GIREG_:
+      val = GIREG_.group('value')
+      if val == 'ON':
+        val = 1
+      elif val == 'OFF':
+        val = 0
+      comment=uploadva.delChars(GIREG_.group('comment'))
+      if val or comment:
+        nindex = eval(GIREG_.group(1))
+        prop = comp.createProperty(VC_REAL, 'GroupInput::GI%i' % nindex + '%s' % comment)
+        prop.Value = int(val)
+        prop.Group = nindex
+      continue
+
+
 
     FLGREG_ = re.search(flgregister, line)
     if FLGREG_:
@@ -162,6 +228,22 @@ def uploadsum_(program,infile):
         prop.Value = val
         prop.Group = nindex
       continue
+
+    MRKREG_ = re.search(mrkregister, line)
+    if MRKREG_:
+      val = MRKREG_.group('value')
+      if val == 'ON':
+        val = 1
+      elif val == 'OFF':
+        val = 0
+      comment = uploadva.delChars(MRKREG_.group('comment'))
+      if val or comment:
+        nindex = eval(MRKREG_.group(1))
+        prop = comp.createProperty(VC_REAL, 'Merker::M%i' % nindex + '%s' % comment)
+        prop.Value = val
+        prop.Group = nindex
+      continue
+
 
   return True
 
