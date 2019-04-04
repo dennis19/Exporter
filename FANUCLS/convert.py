@@ -4,6 +4,7 @@ from decimal import *
 import download
 import re
 import IntermediateConvert
+import IntermediateConvertABB
 sp = r'\s+'
 eq = r'\s*=\s*'
 comma = r'\s*,\s*'
@@ -187,6 +188,9 @@ def convertRoutine(comp,routine):
   global text, statementCount, uframe_num, utool_num, label
   print 'Converting %s to LS' % routine.Name
   rname = routine.Name
+  program_=routine.Program
+  executor_ = program_.Executor
+  rob_cnt_ = executor_.Controller
 
   # k=0
   # while k<len(comp.Properties):
@@ -227,6 +231,17 @@ def convertRoutine(comp,routine):
   """
   td = time.strftime("DATE %y-%m-%d  TIME %H:%M:%S")
   text = header % (rname, rname, td, td)
+  #print "name %s" %rob_cnt_.Name
+  if rob_cnt_.Name=="IRC5":
+    producer_="ABB"
+    #head_ = 'MODULE'
+    #filter_="*.mod"
+    #upload_programs(program_,infile,filename_)
+  elif rob_cnt_.Name=="R30iA":
+    producer_ = "FANUC"
+    #head_ = '/PROG'
+    #filter_ = "*.ls"
+
 
   mainroutine = comp.getProperty('MainRoutine')
   if mainroutine:
@@ -245,7 +260,7 @@ def convertRoutine(comp,routine):
   for statement in routine.Statements:
     text+= "%4i:  " % statementCount
     line_data_=IntermediateConvert.getStatementData(statement)
-    text+=writeLine(line_data_)+";\n"
+    text+= writeLine(line_data_,producer_)+";\n"
   # endfor
   pos_ = """/POS\n"""
   text += pos_
@@ -268,8 +283,17 @@ def convertRoutine(comp,routine):
 
   note.Note = text
 
+def writeLine(line_data_,producer_):
+  global text, statementCount, uframe_num, utool_num, label
+  if producer_=="ABB":
+    line=IntermediateConvertABB.writeLineABB(line_data_)
+  elif producer_=="FANUC":
+    line =writeLineFanuc(line_data_)
 
-def writeLine( line_data_ ):
+  statementCount += 1
+  return line
+
+def writeLineFanuc( line_data_ ):
   global text, statementCount, uframe_num, utool_num, label
   line=""
   # if line_data_=="":
@@ -315,12 +339,12 @@ def writeLine( line_data_ ):
   elif line_data_[0]=="Return":
     line+=writeReturn(line_data_[1])
   else:
-    print statement.Type
-    return 
+    print "Statement %s not translated" %line_data_[0]
+
 
   #endif
   # line+="\n;"
-  statementCount += 1
+  #statementCount += 1
   #text += line
   return line
 
@@ -576,8 +600,10 @@ def writeIf(if_data_):
   #elselabel = label
   #label += 1
   #condition_=if_data_[0]
+  #print "line_data_ %s" %if_data_[1]
   line += "IF %s," % (if_data_[0])
-  line+=writeLine(if_data_[1])
+  for data_ in if_data_[1]:
+    line+=writeLineFanuc(data_)
 
   #line +=";\n"
   # if statement.ThenScope.Statements[0].Type == "Process":
@@ -599,9 +625,12 @@ def writeIf(if_data_):
   #text_part_ += line
 
   #statementCount += 1
+
+  if not if_data_[2]==[]:
+    line += "ELSE"
   for s in if_data_[2]:
     #print "if_data %s" % if_data_[2]
-    line+=writeLine(statement,if_data_[2])
+    line+=writeLineFanuc(s)
   #text_part_ += line
   #   statementCount += 1
   #line = "%4i: JMP LBL[%i];\n" % (statementCount, elselabel)
@@ -663,10 +692,18 @@ def writeMotion(motion_data_):
 
   # pointIndex = statement.INDEX
 
+  if re.search("(?P<Nr>[0-9_]+)",motion_data_[0]):
+    uf_def_=re.search("(?P<Nr>[0-9_]+)",motion_data_[0])
+    motion_data_[0]=uf_def_.group('Nr')
+    print "motion %s" % motion_data_[0]
+  if re.search("(?P<Nr>[0-9_]+)",motion_data_[1]):
+    ut_def_=re.search("(?P<Nr>[0-9_]+)",motion_data_[1])
+    motion_data_[1]=ut_def_.group('Nr')
+
   # uf = download.GetBaseIndex(statement, controller)
   if uframe_num != motion_data_[0]:
     uframe_num = motion_data_[0]
-    line += "UFRAME_NUM = %i ;\n" % (motion_data_[0])
+    line += "UFRAME_NUM = %s ;\n" % (motion_data_[0])
     statementCount += 1
     line += "%4i:  " % statementCount
     # endif
@@ -674,7 +711,7 @@ def writeMotion(motion_data_):
   # ut = download.GetToolIndex(statement, controller)
   if utool_num != motion_data_[1]:
     utool_num = motion_data_[1]
-    line += "UTOOL_NUM = %i ;\n" % (motion_data_[1])
+    line += "UTOOL_NUM = %s ;\n" % (motion_data_[1])
     statementCount += 1
     line += "%4i:  " % statementCount
     # endif
@@ -731,8 +768,21 @@ def writeMotion(motion_data_):
   # if statement.getProperty('Position'):
   #   line+=" ToolOffset,%s" %statement.getProperty('Register').Value
 
+  if re.findall(obracket+"(?P<Nr>[0-9_]+)"+'(?P<comment>(\s*:.*)?)'+cbracket,motion_data_[5]):
+    match_=re.search(obracket+"(?P<Nr>[0-9_]+)"+'(?P<comment>(\s*:.*)?)'+cbracket,motion_data_[5])
+    if not match_.group('comment')=="":
+      if  match_.group('comment').split(":"):
+        motion_data_[5]=":"+match_.group('comment').split(":")[1]
+        #print "name:%s" % pName
+    else:
+      motion_data_[5]=match_.group('comment')
+  elif re.findall("P(?P<Nr>[0-9]+)", motion_data_[5]):
+    motion_data_[5] = ""
+  else:
+    motion_data_[5]=":"+pName
+
   if motion_data_[2] == "joint":
-    line += "J %s[%s%s]  %g%%"%(motion_data_[3], motion_data_[4], motion_data_[5],motion_data_[6])
+    line += "J %s[%s%s]  %g%%"%(motion_data_[3], motion_data_[4], motion_data_[5],100*motion_data_[6])
   else:
     # print "pos %s" %statement.Positions[0].PositionInWorld.P.X
     line += "L %s[%s%s]  %gmm/sec" %(motion_data_[3], motion_data_[4], motion_data_[5], motion_data_[6])

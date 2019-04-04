@@ -28,6 +28,11 @@ def OnStart():
   cmd = loadCommand('FanucUploadLS', cmduri)
   addMenuItem('VcProgramStatements/ProgramStatements/LS', 'Upload FANUC LS Program', -1, cmd.Name, 'Uploads FANUC LS program file into simulation environment', 'rgImportGeneral' )
 
+  cmduri = getApplicationPath() + 'upload.py'
+  cmd = loadCommand('FanucUploadLSA', cmduri)
+  addMenuItem('VcProgramStatements/ProgramStatements/LS', 'Upload ABB MOD Program', -1, cmd.Name, 'Uploads ABB MOD program file into simulation environment', 'rgImportGeneral' )
+
+
   cmduri = getApplicationPath() + 'uploadva.py'
   cmd = loadCommand('FanucUploadVA', cmduri)
   addMenuItem('VcProgramStatements/ProgramStatements/LS', 'Upload FANUC LS VA data file', -1, cmd.Name, 'Uploads a FANUC LS VA System Data file', 'rRestoreLayout' )

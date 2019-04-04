@@ -3,7 +3,6 @@ import re
 import os.path
 import vcMatrix
 import vcVector
-import IntermediateUpload
 
 
 sp = r'\s+'
@@ -219,8 +218,7 @@ def OnStart():
   #toolname
   toolnameregex = r"(?P<toolnam>[a-zA-Z0-9_]+)\\WObj"  
   #get name of wobj
-  movejregex = "MoveJ "
-  moveLregex = "MoveL "
+
   speedregex = r",v(?P<speed>[a-zA-Z0-9_]+)," 
   ifregex = "IF "
   elseregex = "ELSE"
@@ -248,8 +246,8 @@ def OnStart():
     #endif
     scope=None
     if lineCount[0]!=0:
-	  lineCount[0]-=1
-	  continue
+      lineCount[0]-=1
+      continue
     print "lineCount[0]: %s" % (lineCount[0])  
     # if lineCount[1]!=0:
       # lineCount[1]-=1
@@ -261,107 +259,114 @@ def OnStart():
   return True
 
 
-def createStatement(routine, line, filestring, robCnt, scope, program):
-  global movejregex, moveLregex, ifregex, i
-  i += 1
-  whileloopregex = " WHILE "
-  callregex = "(?P<routine>[a-zA-Z0-9_]+);"
-  variableregex = "(?P<a>[a-zA-Z0-9_]+):=(?P<b>[a-zA-Z0-9]+);"
-  moveJdef = re.findall(movejregex, line)
-
-  data=IntermediateUpload.getStatement(routine, line, filestring, robCnt, scope, program)
-  print "data: %s" % data
-  if moveJdef:
-    s = createPTP(line, robCnt, routine, scope)
-    i -= 1
+def getStatement(routine, line, filestring, robCnt, scope, program):
+  #global  i
+  #i += 1
+  #movejregex = "MoveJ "
+  #moveLregex = "MoveL "
+  #whileloopregex = " WHILE "
+  #callregex = "(?P<routine>[a-zA-Z0-9_]+);"
+  #variableregex = "(?P<a>[a-zA-Z0-9_]+):=(?P<b>[a-zA-Z0-9]+);"
+  #moveJdef = re.findall(movejregex, line)
+  print "line: %s" % line
+  if re.findall("MoveJ",line):
+    s = getMovementData(line,filestring)
+    #i -= 1
     return s
-  # moveLdef = re.findall(moveLregex, line)
-  # if moveLdef:
+  #moveLdef = re.findall(moveLregex, line)
+  # elif re.findall("MoveL",line):
   #   s = createLin(line, robCnt, routine, scope)
   #   i -= 1
   #   return s
   # # ifdef= re.findall(ifregex,line)
-  # if re.findall(" IF", line):
+  # elif re.findall(" IF", line):
   #   s = createIF(routine, line, filestring, robCnt, scope, program)
   #   i -= 1
   #   return s
-  # if re.findall("!", line):
+  # elif re.findall(" !", line):
   #   s = createComment(routine, line, filestring, robCnt, scope)
   #   i -= 1
   #   return s
-  # if re.findall("BREAK;", line):
+  # elif re.findall("BREAK;", line):
   #   s = createBreak(scope)
   #   i -= 1
   #   return s
-  # if re.findall("RETURN;", line):
+  # elif re.findall("RETURN;", line):
   #   s = createReturn(scope)
   #   i -= 1
   #   return s
-  # if re.findall(" WHILE ", line):
+  # elif re.findall(" WHILE ", line):
   #   s = createWhile(routine, line, filestring, robCnt, scope, program)
   #   i -= 1
   #   return s
-  # if re.findall("SetDO ", line):
+  # elif re.findall("SetDO ", line):
   #   s = createSetBin(routine, line, filestring, robCnt, scope, program)
   #   i -= 1
   #   return s
-  # if re.findall("WaitDI ", line):
+  # elif re.findall("WaitDI ", line):
   #   s = createWaitBin(routine, line, filestring, robCnt, scope, program)
   #   i -= 1
   #   return s
-  # if re.findall("WaitTime", line):
+  # elif re.findall("WaitTime", line):
   #   s = createDelay(routine, line, filestring, robCnt, scope, program)
   #   i -= 1
   #   return s
-  # variableDef = re.search(callregex, line)
-  # if variableDef:
+  # #variableDef = re.search(callregex, line)
+  # elif "(?P<routine>[a-zA-Z0-9_]+);":
   #   s = createSetProperty(routine, line, filestring, robCnt, scope, program)
   #   i -= 1
   #   return s
-  # callDef = re.search(callregex, line)
-  # if callDef:
+  #callDef = re.search(callregex, line)
+  # elif "(?P<routine>[a-zA-Z0-9_]+);":
   #   s = createCall(routine, line, filestring, robCnt, scope, callDef, program)
   #   i -= 1
   #   return s
+  else:
+    pass
+    #i -= 1
 
-  i -= 1
 
 #read in pos
-def readPos(s,line,robCnt):  
-	  # find name of position
-  global targetmovenameregex
-  posname = re.search(targetmovenameregex,line)
+def getMovementData(line,filestring):
+  # find name of position
+  #targetmovenameregex = r" (?P<point>[a-zA-Z0-9_]+),"  #
+  #global targetmovenameregex
+  move_data_=[]
+  posname = re.search(r" (?P<point>[a-zA-Z0-9_]+),",line)
   targetname= posname.group('point')
   #print "name: %s" % targetname
-  for lineRT in filestring.split('\n'):
-    #find position	  
-    rtmatch=re.findall(targetname+":="+robtargetregex, lineRT)
+  for lineFindPos in filestring.split('\n'):
+    #find position
+    rob_target_def=re.findall(targetname+":="+"\[ *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *\]", lineFindPos)
     #print "rtmatch: %s" % rtmatch
-    if rtmatch:
-      positionmatch=re.findall(robtargetregex, lineRT)
-      #print "positionmatch: %s" % positionmatch
-      for mymatch in positionmatch:    
-        match=re.findall(floatregex, mymatch)
-        #print "match: %s" % match
+    if rob_target_def:
+      positionmatch=re.findall("\[ *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *\]", lineFindPos)
+
+      print "positionmatch: %s" % positionmatch
+      #for mymatch in positionmatch:
+      match=re.findall("[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?", positionmatch[0])
+      print "match: %s" % match
                 #   robtarget has 17 floating point values
-        if len(match)==17:
-          m = vcMatrix.new()
-			
-          m.P = vcVector.new(float(match[0]),float(match[1]),float(match[2]))
-          m.setQuaternion(float(match[4]),float(match[5]),float(match[6]),float(match[3]))
-          t = robCnt.createTarget(m)
-          if s.Type==VC_STATEMENT_PTPMOTION:
-            #t.CartesianSpeed=readSpeed(line)
-            s.JointSpeed=float(readSpeed(line))/6000.00
-            help= float(readSpeed(line))/6000.00
-            print "s.JointSpeed %f" %help
-            #s.MaxSpeed=readSpeed(line)
-          elif s.Type==VC_STATEMENT_LINMOTION:
-		    s.MaxSpeed=readSpeed(line)
-          print "t.CartesianSpeed=: %s" % t.CartesianSpeed
-              #use correct position
-          posFrame= s.Positions[0]
-          posFrame.PositionInReference=m  
+      if len(match)==17:
+        move_data_=[float(match[0]),float(match[1]),float(match[2]),float(match[4]),float(match[5]),float(match[6]),float(match[3])]
+        # m = vcMatrix.new()
+        # m.P = vcVector.new(float(match[0]),float(match[1]),float(match[2]))
+        # m.setQuaternion(float(match[4]),float(match[5]),float(match[6]),float(match[3]))
+          #t = robCnt.createTarget(m)
+          # if s.Type==VC_STATEMENT_PTPMOTION:
+          #   #t.CartesianSpeed=readSpeed(line)
+          #   s.JointSpeed=float(readSpeed(line))/6000.00
+          #   help= float(readSpeed(line))/6000.00
+          #   print "s.JointSpeed %f" %help
+          #   #s.MaxSpeed=readSpeed(line)
+          # elif s.Type==VC_STATEMENT_LINMOTION:
+		  #   s.MaxSpeed=readSpeed(line)
+          # print "t.CartesianSpeed=: %s" % t.CartesianSpeed
+          #     #use correct position
+          # posFrame= s.Positions[0]
+          # posFrame.PositionInReference=m
+  return move_data_
+
 
 
 def defineTool(s,line,robCnt):
@@ -398,12 +403,9 @@ def defineWObj(s,line,robCnt):
           app.messageBox("Undefined workobject \'%s\' in robot program" % wobjname,"Warning",VC_MESSAGE_TYPE_WARNING,VC_MESSAGE_BUTTONS_OK)
 
 def readSpeed(line):
-  #global speedregex
-  speeddef= re.search(r",v(?P<speed>[a-zA-Z0-9_]+)," ,line)
-  if speeddef:
-    speed = speeddef.group('speed')
-  else:
-    speed="4000"
+  global speedregex	
+  speeddef= re.search(speedregex,line)
+  speed = speeddef.group('speed')
   print "speed: %s" % speed
   if speed == 'max':     return 6000
   elif speed == "4000":  return 4000
@@ -430,17 +432,18 @@ def readSpeed(line):
   else:                  return 5 
 
   
-def createPTP(line,robCnt,routine,scope):
-  if scope:
-    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
-      s= scope.addStatement(VC_STATEMENT_PTPMOTION)
-  else:
-    s = routine.addStatement(VC_STATEMENT_PTPMOTION)
-  readPos(s,line,robCnt)
-  defineTool(s,line,robCnt)  
-  defineWObj(s,line,robCnt)
+def createPTP(line,robCnt,routine,scope,filestring):
+  # if scope:
+  #   if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+  #     s= scope.addStatement(VC_STATEMENT_PTPMOTION)
+  # else:
+  #   s = routine.addStatement(VC_STATEMENT_PTPMOTION)
+  move_data_=getMovementData(line,filestring)
+  print "move_data_ %s" %move_data_
+  #defineTool(s,line,robCnt)
+  #defineWObj(s,line,robCnt)
   #get accuracy
-  return s
+  return move_data_
 def createLin(line,robCnt,routine,scope):
   if scope:
     if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
@@ -689,7 +692,6 @@ def createDelay(routine,line,filestring,robCnt,scope,program):
   s.Delay=int(TimeValue.group('time'))
  
 
-    
   
   		
 #-------------------------------------------------------------------------------

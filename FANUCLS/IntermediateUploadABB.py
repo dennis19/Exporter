@@ -3,7 +3,7 @@ import re
 import os.path
 import vcMatrix
 import vcVector
-import IntermediateUpload
+import upload
 
 
 sp = r'\s+'
@@ -13,6 +13,8 @@ colon = r'\s*:\s*'
 semicolon = r'\s*;\s*'
 obracket = r'\s*\[\s*'
 cbracket = r'\s*\]\s*'
+orbracket = r'\s*\(\s*'
+crbracket = r'\s*\)\s*'
 obrace = r'\s*\{\s*'
 cbrace = r'\s*\}\s*'
 integer = r'-?\d+'
@@ -219,8 +221,7 @@ def OnStart():
   #toolname
   toolnameregex = r"(?P<toolnam>[a-zA-Z0-9_]+)\\WObj"  
   #get name of wobj
-  movejregex = "MoveJ "
-  moveLregex = "MoveL "
+
   speedregex = r",v(?P<speed>[a-zA-Z0-9_]+)," 
   ifregex = "IF "
   elseregex = "ELSE"
@@ -248,199 +249,337 @@ def OnStart():
     #endif
     scope=None
     if lineCount[0]!=0:
-	  lineCount[0]-=1
-	  continue
+      lineCount[0]-=1
+      continue
     print "lineCount[0]: %s" % (lineCount[0])  
     # if lineCount[1]!=0:
       # lineCount[1]-=1
       # continue
 
-    createStatement(routine,line,filestring,robCnt,scope,program)
+    createStatement(line,filestring)
   
 
   return True
 
+def getGlobVar(line):
+  var_data_=[]
 
-def createStatement(routine, line, filestring, robCnt, scope, program):
-  global movejregex, moveLregex, ifregex, i
-  i += 1
-  whileloopregex = " WHILE "
-  callregex = "(?P<routine>[a-zA-Z0-9_]+);"
-  variableregex = "(?P<a>[a-zA-Z0-9_]+):=(?P<b>[a-zA-Z0-9]+);"
-  moveJdef = re.findall(movejregex, line)
+  if not re.findall("LOCAL", line) and re.findall("PERS num", line):
 
-  data=IntermediateUpload.getStatement(routine, line, filestring, robCnt, scope, program)
-  print "data: %s" % data
-  if moveJdef:
-    s = createPTP(line, robCnt, routine, scope)
-    i -= 1
-    return s
-  # moveLdef = re.findall(moveLregex, line)
-  # if moveLdef:
-  #   s = createLin(line, robCnt, routine, scope)
-  #   i -= 1
-  #   return s
-  # # ifdef= re.findall(ifregex,line)
-  # if re.findall(" IF", line):
-  #   s = createIF(routine, line, filestring, robCnt, scope, program)
-  #   i -= 1
-  #   return s
-  # if re.findall("!", line):
-  #   s = createComment(routine, line, filestring, robCnt, scope)
-  #   i -= 1
-  #   return s
-  # if re.findall("BREAK;", line):
-  #   s = createBreak(scope)
-  #   i -= 1
-  #   return s
-  # if re.findall("RETURN;", line):
-  #   s = createReturn(scope)
-  #   i -= 1
-  #   return s
-  # if re.findall(" WHILE ", line):
-  #   s = createWhile(routine, line, filestring, robCnt, scope, program)
-  #   i -= 1
-  #   return s
-  # if re.findall("SetDO ", line):
-  #   s = createSetBin(routine, line, filestring, robCnt, scope, program)
-  #   i -= 1
-  #   return s
-  # if re.findall("WaitDI ", line):
-  #   s = createWaitBin(routine, line, filestring, robCnt, scope, program)
-  #   i -= 1
-  #   return s
-  # if re.findall("WaitTime", line):
-  #   s = createDelay(routine, line, filestring, robCnt, scope, program)
-  #   i -= 1
-  #   return s
-  # variableDef = re.search(callregex, line)
-  # if variableDef:
-  #   s = createSetProperty(routine, line, filestring, robCnt, scope, program)
-  #   i -= 1
-  #   return s
-  # callDef = re.search(callregex, line)
-  # if callDef:
-  #   s = createCall(routine, line, filestring, robCnt, scope, callDef, program)
-  #   i -= 1
-  #   return s
+    var_def_=re.search("PERS num " + r"(?P<var>[a-zA-Z0-9_]+)",line)
+    if var_def_:
+      var_data_.append(var_def_.group('var'))
+      #print "var_data %s" % var_data_
+      if re.search(colon + eq + r"(?P<value>[a-zA-Z0-9_]+)",line):
+        value_def_ = re.search(colon + eq + r"(?P<value>[a-zA-Z0-9_]+)",line)
+        value_ = value_def_.group('value')
+        var_data_.append(value_)
+        #print "var_data %s" % var_data_
 
-  i -= 1
+  elif not re.findall("LOCAL", line) and re.findall("PERS bool", line):
+    var_def_=re.search("PERS bool " + r"(?P<var>[a-zA-Z0-9_]+)",line)
+    if var_def_:
+      var_data_.append(var_def_.group('var'))
+
+      #print "var_data %s" %var_data_
+      if re.search(colon+eq+r"(?P<value>[a-zA-Z0-9_]+)",line):
+        value_def_=re.search(colon+eq+r"(?P<value>[a-zA-Z0-9_]+)",line)
+        value_=value_def_.group('value')
+        var_data_.append(value_)
+
+  elif not re.findall("LOCAL", line) and re.findall("PERS speeddata", line):
+    var_def_=re.search("PERS speeddata " + r"(?P<var>[a-zA-Z0-9_]+)",line)
+    if var_def_:
+      var_data_.append(var_def_.group('var'))
+
+
+      if re.search(colon+eq+obracket+r"(?P<value>[a-zA-Z0-9_]+)",line):
+        value_def_=re.search(colon+eq+obracket+r"(?P<value1>[a-zA-Z0-9_]+)"+comma+r"(?P<value2>[a-zA-Z0-9_]+)"+comma+r"(?P<value3>[a-zA-Z0-9_]+)"+comma+r"(?P<value4>[a-zA-Z0-9_]+)"+cbracket,line)
+        value_=[value_def_.group('value1'),value_def_.group('value2'),value_def_.group('value3'),value_def_.group('value4')]
+        var_data_.append(value_)
+        #print "var_data %s" % var_data_
+
+  return var_data_
+
+
+def getToolFrames(line):
+  tool_data_=[]
+  if not re.findall("LOCAL", line) and re.findall("PERS tooldata", line):
+    tool_def_ = re.findall(
+      r"(?P<target>[a-zA-Z0-9_]+)" + ":=" +obracket +r"(?P<bool>[a-zA-Z]+)"+comma+obracket+obracket+
+      "(?P<coordx>[0-9\.\-_]+)"+comma+"(?P<coordy>[0-9\.\-_]+)"+comma+"(?P<coordz>[0-9\.\-_]+)"+cbracket+comma+obracket+
+      "(?P<orient1>[0-9\.\-_]+)"+comma+"(?P<orient2>[0-9\.\-_]+)"+comma+"(?P<orient3>[0-9\.\-_]+)"+comma+"(?P<orient4>[0-9\.\-_]+)"+cbracket,line)#"\[ *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *\]",
+      #line)
+    if tool_def_:
+      m = vcMatrix.new()
+      #print "tool %s" %tool_def_[0][2]
+      tool_name_=tool_def_[0][0]
+      m.setQuaternion(float(tool_def_[0][6]), float(tool_def_[0][7]), float(tool_def_[0][8]), float(tool_def_[0][5]))
+      coordinates_ = [float(tool_def_[0][2]), float(tool_def_[0][3]), float(tool_def_[0][4]), m.WPR.X, m.WPR.Y, m.WPR.Z]
+      #print "coord %s" %coordinates_
+      tool_data_.append([tool_name_,coordinates_])
+  return tool_data_
+
+
+def getGlobPos(line):
+  move_data_=None
+  if not re.findall("LOCAL",line) and re.findall("PERS robtarget",line):
+    rob_target_def = re.findall(
+      r"(?P<target>[a-zA-Z0-9_]+)" + ":=" + "\[ *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *\]",
+      line)
+    targetname=rob_target_def[0]
+    positionmatch = re.findall(
+      "\[ *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *\]", line)
+    # print "target: %s" % targetname
+
+    # print "positionmatch: %s" % positionmatch
+    # for mymatch in positionmatch:
+    match = re.findall("[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?", positionmatch[0])
+    # print "match: %s" % match
+    #   robtarget has 17 floating point values
+    if len(match) == 17:
+      m = vcMatrix.new()
+      # m.P = vcVector.new(float(match[0]),float(match[1]),float(match[2]))
+      m.setQuaternion(float(match[4]), float(match[5]), float(match[6]), float(match[3]))
+      coordinates_ = [float(match[0]), float(match[1]), float(match[2]), m.WPR.X, m.WPR.Y, m.WPR.Z]
+      config_data_ = [match[7], match[8], match[9], match[10]]
+      #tool_ = getTool(line)
+      #base_ = getBase(line)
+      #speed_ = getSpeed(line)
+      move_data_ = [targetname, coordinates_, config_data_,"coord"]
+
+  elif not re.findall("LOCAL",line) and re.findall("PERS jointtarget",line):
+    rob_target_def = re.findall(
+      r"(?P<target>[a-zA-Z0-9_]+)" + ":=" +obracket + obracket+"(?P<joint1>[0-9\.\-_]+)"+comma+"(?P<joint2>[0-9\.\-_]+)"+comma+"(?P<joint3>[0-9\.\-_]+)"+comma+"(?P<joint4>[0-9\.\-_]+)"+comma+"(?P<joint5>[0-9\.\-_]+)"+comma+"(?P<joint6>[0-9\.\-_]+)"+cbracket,line)
+      #line)
+    #print "robtarget %s" %rob_target_def
+    if rob_target_def:
+      targetname = rob_target_def[0]
+      #print "target: %s" % targetname[0]
+      coordinates_ = [float(targetname[1]), float(targetname[2]), float(targetname[3]), float(targetname[4]), float(targetname[5]), float(targetname[6])]
+      config_data_=[]
+      move_data_=[targetname[0],coordinates_,config_data_,"joint"]
+
+  return move_data_
+
+
+def getStatement( line, filestring):
+  #print "line %s" %line
+  if re.findall("MoveJ",line):
+    data_ = getMovementData(line,filestring)
+    statement_type_="JointMovement"
+  elif re.findall("MoveL",line):
+    data_ = getMovementData(line,filestring)
+    statement_type_="LinearMovement"
+  elif re.findall(" !", line):
+    data_ = getComment(line)
+    statement_type_="Comment"
+  elif re.findall("SetDO ", line) or re.findall("SetDo ", line):
+    data_ = getSetDO(line)
+    statement_type_="SetOutput"
+  elif re.findall("WaitDI ", line):
+    data_ = getWait(line)
+    statement_type_="Wait"
+  elif re.findall("TPWrite",line):
+    data_=getMessage(line)
+    statement_type_="Print"
+  elif re.findall(" IF", line):
+    #print "line %s" %line
+    data_=getIf(line,filestring)
+    statement_type_="If"
+  elif re.findall(" TEST ",line):
+    data_=getSelect(line,filestring)
+    statement_type_="Switch"
+  elif re.findall("BREAK;", line):
+    data_=getBreak(line)
+    statement_type_="Break"
+  elif re.findall("RETURN;", line):
+    data_=getReturn(line)
+    statement_type_="Return"
+  elif re.findall("GOTO",line):
+    statement_type_ = "Jump"
+    data_ = getJump(line)
+  elif re.findall("WaitTime", line):
+    data_=getWait(line)
+    statement_type_="WaitTime"
+  elif re.findall('Message "',line)or re.findall("WaitCond",line):
+    data_=getCall(line)
+    statement_type_="Call"
+  elif re.findall("(?P<var1>[a-zA-Z0-9_]+)"+colon+eq+"(?P<var2>[a-zA-Z0-9_]+);",line):
+    #print "line %s" %line
+    data_=getSetVariable(line)
+    statement_type_="SetVariable"
+  elif re.findall("  (?P<lbl>[a-zA-Z0-9_]+)"+colon,line) and not re.findall("=",line):
+    #print "line %s" % line
+    data_=getLabel(line)
+    statement_type_="Label"
+  elif re.findall("  (?P<routine>[a-zA-Z0-9_]+);",line):# or re.findall("Message",line) or re.findall("WaitCond",line):
+    data_=getCall(line)
+    statement_type_="Call"
+  else:
+    statement_type_=None
+    data_=None
+    #i -= 1
+
+  return statement_type_,data_
 
 #read in pos
-def readPos(s,line,robCnt):  
-	  # find name of position
-  global targetmovenameregex
-  posname = re.search(targetmovenameregex,line)
-  targetname= posname.group('point')
-  #print "name: %s" % targetname
-  for lineRT in filestring.split('\n'):
-    #find position	  
-    rtmatch=re.findall(targetname+":="+robtargetregex, lineRT)
-    #print "rtmatch: %s" % rtmatch
-    if rtmatch:
-      positionmatch=re.findall(robtargetregex, lineRT)
-      #print "positionmatch: %s" % positionmatch
-      for mymatch in positionmatch:    
-        match=re.findall(floatregex, mymatch)
+def getMovementData(line,filestring):
+  # find name of position
+  #targetmovenameregex = r" (?P<point>[a-zA-Z0-9_]+),"  #
+  #global targetmovenameregex
+  move_data_=[]
+  #speed_=[]
+  if re.findall("RelTool",line):
+    posname=re.search(orbracket+r"(?P<point>[a-zA-Z0-9_]+),",line)
+    targetname=posname.group('point')
+  else:
+    posname = re.search(r" (?P<point>[a-zA-Z0-9_]+)"+comma,line)
+    targetname= posname.group('point')
+  if re.findall("HOME",targetname) or re.findall("PrePos",targetname):
+    #targetname=targetname
+    speed_=[10000,""]
+    move_data_ = [targetname, speed_, [], [], 0, 0, ["", ""]]
+
+    print "name: %s" % targetname
+  else:
+    for lineFindPos in filestring.split('\n'):
+      #find position
+      rob_target_def=re.findall(targetname+":="+"\[ *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *\]", lineFindPos)
+      if rob_target_def:
+        positionmatch=re.findall("\[ *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *, *\[[0-9+-eE,. ]+\] *\]", lineFindPos)
+       #print "target: %s" % targetname
+
+        #print "positionmatch: %s" % positionmatch
+        #for mymatch in positionmatch:
+        match=re.findall("[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?", positionmatch[0])
         #print "match: %s" % match
                 #   robtarget has 17 floating point values
         if len(match)==17:
           m = vcMatrix.new()
-			
-          m.P = vcVector.new(float(match[0]),float(match[1]),float(match[2]))
+          # m.P = vcVector.new(float(match[0]),float(match[1]),float(match[2]))
           m.setQuaternion(float(match[4]),float(match[5]),float(match[6]),float(match[3]))
-          t = robCnt.createTarget(m)
-          if s.Type==VC_STATEMENT_PTPMOTION:
-            #t.CartesianSpeed=readSpeed(line)
-            s.JointSpeed=float(readSpeed(line))/6000.00
-            help= float(readSpeed(line))/6000.00
-            print "s.JointSpeed %f" %help
-            #s.MaxSpeed=readSpeed(line)
-          elif s.Type==VC_STATEMENT_LINMOTION:
-		    s.MaxSpeed=readSpeed(line)
-          print "t.CartesianSpeed=: %s" % t.CartesianSpeed
-              #use correct position
-          posFrame= s.Positions[0]
-          posFrame.PositionInReference=m  
+          coordinates_ = [float(match[0]), float(match[1]), float(match[2]),m.WPR.X,m.WPR.Y,m.WPR.Z]
+          config_data_=[match[7],match[8],match[9],match[10]]
+          tool_=getTool(line)
+          base_ =getBase(line)
+          speed_=getSpeed(line)
+          move_data_=[targetname,speed_,coordinates_,config_data_,base_,tool_,["",""]]
+        #print "orientation %s" %m.WPR.X
+          #t = robCnt.createTarget(m)
+          # if s.Type==VC_STATEMENT_PTPMOTION:
+          #   #t.CartesianSpeed=readSpeed(line)
+          #   s.JointSpeed=float(readSpeed(line))/6000.00
+          #   help= float(readSpeed(line))/6000.00
+          #   print "s.JointSpeed %f" %help
+          #   #s.MaxSpeed=readSpeed(line)
+          # elif s.Type==VC_STATEMENT_LINMOTION:
+		  #   s.MaxSpeed=readSpeed(line)
+          # print "t.CartesianSpeed=: %s" % t.CartesianSpeed
+          #     #use correct position
+          # posFrame= s.Positions[0]
+          # posFrame.PositionInReference=m
+  if move_data_==[]:
+    speed_=[10000,""]
+    move_data_ = [targetname, speed_, [], [], 0, 0, ["", ""]]
+
+    print "name: %s" % targetname
+
+  return move_data_
 
 
-def defineTool(s,line,robCnt):
+
+def getTool(line):
   global toolnameregex,firstwarning
-  toolname= re.search(toolnameregex,line)
-  rtoolname = toolname.group('toolnam')	  
+  toolname= re.search(r"(?P<toolnam>[a-zA-Z0-9_]+)\\WObj"  ,line)
+  if toolname:
+    rtoolname = toolname.group('toolnam')
+  elif re.search(r"(?P<toolnam>[a-zA-Z0-9_]+);",line):
+    toolname=re.search(r"(?P<toolnam>[a-zA-Z0-9_]+);",line)
+    rtoolname = toolname.group('toolnam')
   #print "toolname: %s" % rtoolname
   if rtoolname:
+    tool_data_=rtoolname
+    tool_data_=0
 	# for lineRT in filestring.split('\n'):
 	# rtmatch=re.findall(rtoolname+":=", lineRT)
     #set base for statement only if the base is found from controller
-    for b in robCnt.Tools:
-      if b.Name == rtoolname:
-        s.Tool=rtoolname
-      if s.Tool!=rtoolname and firstwarning:
-        firstwarning=False
-        app.messageBox("Undefined tool \'%s\' in robot program" % rtoolname,"Warning",VC_MESSAGE_TYPE_WARNING,VC_MESSAGE_BUTTONS_OK)		
+    # for b in robCnt.Tools:
+    #   if b.Name == rtoolname:
+    #     s.Tool=rtoolname
+    #   if s.Tool!=rtoolname and firstwarning:
+    #     firstwarning=False
+    #     app.messageBox("Undefined tool \'%s\' in robot program" % rtoolname,"Warning",VC_MESSAGE_TYPE_WARNING,VC_MESSAGE_BUTTONS_OK)
+  return tool_data_
 
-def defineWObj(s,line,robCnt):
+def getBase(line):
   global wobjregex,firstwarning
-  wobjdef = re.search(wobjregex,line)
+  wobjdef = re.search(r"\\WObj:=(?P<workobject>[a-zA-Z0-9]+)",line)
   #print "line: %s" % line
   #print "wobjdef: %s" % wobjdef
   if wobjdef:
     wobjname = wobjdef.group('workobject')
 
     if wobjname:
+      base_data_=wobjname
+      base_data_=0
         #set base for statement only if the base is found from controller
-      for b in robCnt.Bases:
-        if b.Name == wobjname:
-          s.Base=wobjname
-        if s.Base!=wobjname and firstwarning:
-          firstwarning=False
-          app.messageBox("Undefined workobject \'%s\' in robot program" % wobjname,"Warning",VC_MESSAGE_TYPE_WARNING,VC_MESSAGE_BUTTONS_OK)
+      # for b in robCnt.Bases:
+      #   if b.Name == wobjname:
+      #     s.Base=wobjname
+      #   if s.Base!=wobjname and firstwarning:
+      #     firstwarning=False
+      #     app.messageBox("Undefined workobject \'%s\' in robot program" % wobjname,"Warning",VC_MESSAGE_TYPE_WARNING,VC_MESSAGE_BUTTONS_OK)
+  else:
+    base_data_=0
+  return base_data_
 
-def readSpeed(line):
+
+def getSpeed(line):
   #global speedregex
   speeddef= re.search(r",v(?P<speed>[a-zA-Z0-9_]+)," ,line)
   if speeddef:
     speed = speeddef.group('speed')
-  else:
-    speed="4000"
-  print "speed: %s" % speed
-  if speed == 'max':     return 6000
-  elif speed == "4000":  return 4000
-  elif speed == "3000":  return 3000
-  elif speed == "2500":  return 2500
-  elif speed == "2000":  return 2000
-  elif speed == "1500":  return 1500
-  elif speed == "1000":  return 1000
-  elif speed == "800":    return 800
-  elif speed == "600":    return 600
-  elif speed == "500":    return 500
-  elif speed == "400":    return 400
-  elif speed == "300":    return 300
-  elif speed == "200":    return 200
-  elif speed == "150":    return 150
-  elif speed == "100":    return 100
-  elif speed == "80":     return 80
-  elif speed == "60":     return 60
-  elif speed == "50":     return 50
-  elif speed == "40":     return 40
-  elif speed == "30":     return 30
-  elif speed == "20":     return 20
-  elif speed == "10":     return 10
-  else:                  return 5 
+    print "speed: %s" % speed
+  else :
+    speed='2000'
+  if speed == 'max':     return '6000'
+  elif speed == "4000":  return "4000"
+  elif speed == "3000":  return '3000'
+  elif speed == "2500":  return '2500'
+  elif speed == "2000":  return '2000'
+  elif speed == "1500":  return '1500'
+  elif speed == "1000":  return '1000'
+  elif speed == "800":    return '800'
+  elif speed == "600":    return '600'
+  elif speed == "500":    return '500'
+  elif speed == "400":    return '400'
+  elif speed == "300":    return '300'
+  elif speed == "200":    return '200'
+  elif speed == "150":    return '150'
+  elif speed == "100":    return '100'
+  elif speed == "80":     return '80'
+  elif speed == "60":     return '60'
+  elif speed == "50":     return '50'
+  elif speed == "40":     return '40'
+  elif speed == "30":     return '30'
+  elif speed == "20":     return '20'
+  elif speed == "10":     return '10'
+  else:                  return '5'
 
   
-def createPTP(line,robCnt,routine,scope):
-  if scope:
-    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
-      s= scope.addStatement(VC_STATEMENT_PTPMOTION)
-  else:
-    s = routine.addStatement(VC_STATEMENT_PTPMOTION)
-  readPos(s,line,robCnt)
-  defineTool(s,line,robCnt)  
-  defineWObj(s,line,robCnt)
+def createPTP(line,robCnt,routine,scope,filestring):
+  # if scope:
+  #   if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+  #     s= scope.addStatement(VC_STATEMENT_PTPMOTION)
+  # else:
+  #   s = routine.addStatement(VC_STATEMENT_PTPMOTION)
+  move_data_=getMovementData(line,filestring)
+  #print "move_data_ %s" %move_data_
+  #defineTool(s,line,robCnt)
+  #defineWObj(s,line,robCnt)
   #get accuracy
-  return s
+  return move_data_
 def createLin(line,robCnt,routine,scope):
   if scope:
     if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
@@ -453,8 +592,169 @@ def createLin(line,robCnt,routine,scope):
   defineWObj(s,line,robCnt)
   return s
 
-		
-		# #get accuracy
+
+def getCondition(line,cond_all_,char_skip):
+  #print "line:%s" %line[len(cond_all_)+char_skip]
+  condition_ = ["", "", "", "", "", "", ""]
+  if re.search(r"(?P<signs>[\(\)\!\s\,]+)", line[len(cond_all_) + char_skip]):
+    conddef_ = re.search(r"(?P<signs>[\(\)\!\s\,]+)", line[len(cond_all_) + char_skip])
+    cond=conddef_.group('signs')
+    condition_[0] = cond
+  elif re.search(r"(?P<var_type>[a-zA-Z_]+)"+"_"+"(?P<Nr>[0-9]+)" ,
+                 line[len(cond_all_) + char_skip:len(cond_all_) + char_skip + 7]):
+    conddef_=re.search(
+      r"(?P<var_type>[a-zA-Z]+)"+"_"+"(?P<Nr>[0-9]+)"+"_"+r"(?P<comment>[a-zA-Z0-9_]+)" ,
+      line[len(cond_all_) + char_skip:])
+
+    condition_[0]=conddef_.group('var_type')
+
+    condition_[1]='_'
+    condition_[2]=conddef_.group('Nr')
+
+    comment=conddef_.group('comment')
+    comment=comment.split("]")
+    condition_[3]=comment[0]
+    condition_[4]='_'
+    value_def_=re.search(conddef_.group('var_type')+"_"+conddef_.group('Nr')+"_"+comment[0]+r"(?P<eq>[\=\<\>]+)"+r"(?P<value>[a-zA-Z0-9]+)",line[len(cond_all_) + char_skip:])
+    condition_[6]=""
+    condition_[5]=""
+
+    if value_def_:
+      condition_[6]= value_def_.group('value')
+      condition_[5] = value_def_.group('eq')
+
+  elif re.search(r"(?P<logic>[a-zA-Z]+)", line[len(cond_all_) + char_skip]):
+    conddef_ = re.search(
+        r"(?P<logic>[a-zA-Z]+)", line[len(cond_all_) + char_skip:])
+
+    logic_=conddef_.group('logic')
+    logic_=logic_.split(' ')
+    cond=logic_[0]
+    condition_[0] = cond
+
+    value_def_ = re.search(condition_[0]+r"(?P<eq>[\=\<\>]+)"+r"(?P<value>[a-zA-Z0-9_]+)",line)
+
+    if value_def_:
+      condition_[6] = value_def_.group('value')
+      condition_[5] = value_def_.group('eq')
+      #print "value %s" % condition_[6]
+      #print "eq %s" % condition_[5]
+
+  return condition_
+
+def getIf(line,filestring):
+#  cond_def_=re.search("IF (?P<cond>[a-zA-Z0-9_]+)(?P<equal>[\=\!\<\>_]+)(?P<value>[a-zA-Z0-9_]+) THEN",line)
+  in_then_ = 0
+  in_else_ = 0
+  sthen=[]
+  selse=[]
+  #line_nr_=upload.getLineNr(line)
+  #print "linr_nr:%s" %line_nr_
+  for line_if_ in filestring.split('\n'):
+    if re.findall("ENDIF", line_if_) and (in_then_ or in_else_):
+      if len(selse)==0:
+        selse.append("")
+      in_then_=0
+      in_else_=0
+      break
+    if line==line_if_:
+
+      in_then_=1
+      continue
+    if in_then_:
+      #print "linethen:%s" % line_if_
+      sthen.append(getStatement(line_if_,filestring))
+    if re.findall("ELSE",line_if_) and in_then_:
+
+      in_else_=1
+      in_then_=0
+      continue
+    if in_else_:
+      #print "lineelse:%s" % line_if_
+      selse.append(getStatement(line_if_,filestring))
+  return [sthen,selse]
+
+def getSelect(line,filestring):
+  in_select_=0
+  in_else_=0
+  #in_case_=1
+  cases=[]
+  selse=[]
+  case_number=[]
+  case_comment_=None
+  case_state_=[]
+  #print " if get called "
+  for line_select_ in filestring.split('\n'):
+
+
+    if line==line_select_:
+      in_select_=1
+      #print "line %s" % line_select_
+      var_def_=re.search("TEST (?P<var>[a-zA-Z0-9_]+)",line_select_)
+      continue
+    elif re.findall("ENDTEST",line_select_) and in_else_:
+      break
+    elif re.findall("DEFAULT:",line_select_) and in_select_:
+      #print "lineelse %s" % line_select_
+      in_else_=1
+      in_select_=0
+      if not case_state_==[]:
+        case_number.append("==" + nr_)
+        cases.append(case_state_)
+
+    elif re.findall('CASE (?P<nr>[a-zA-Z0-9\:"_]+):',line_select_) and in_select_:
+      #in_case_=0
+      if not case_state_==[]:
+        cases.append(case_state_)
+      case_state_=[]
+      nr_def_=re.search('CASE (?P<nr>[a-zA-Z0-9\:"_]+):',line_select_)
+      nr_=nr_def_.group('nr')
+      case_number.append("=="+nr_)
+      #cases.append(getStatement(line_select_, filestring))
+      case_state_.append(getStatement(line_select_,filestring))
+      #continue
+    elif in_select_:
+      #print "line %s" % line_select_
+      #cases.append(getStatement(line_select_,filestring))
+      case_state_.append(getStatement(line_select_,filestring))
+      #print "case_state_ %s" % case_state_
+
+      #cases.append(case_state_)
+      #in_case_=1
+
+    elif in_else_:
+      #print "lineelse %s" % line_select_
+      selse.append(getStatement(line_select_,filestring))
+
+  return [cases,case_number,selse]
+
+def getJump(line):
+  JmpLblGroup = re.search("GOTO (?P<JmpLbl>[a-zA-Z0-9\[\]\:_]+)", line)
+  jmp_data_=""
+  if JmpLblGroup:
+    JmpLbl = JmpLblGroup.group('JmpLbl')
+    #JmpLblNrGroup = re.search("LBL" + obracket + "(?P<Nr>[a-zA-Z0-9\[\]_]+)"+cbracket, JmpLbl)
+    jmp_data_ = JmpLbl#JmpLblNrGroup.group('Nr')
+    #print "jump %s" %jmp_data_
+  return jmp_data_
+
+def getLabel(line):
+  nr_ = ""
+  comment_ = ""
+
+  if not(re.search("(?P<lbl>[a-zA-Z0-9_]+)"+colon+eq,line)):
+    nr_match_=re.search("(?P<lbl>[a-zA-Z0-9_]+)"+colon,line)
+    if nr_match_:
+      comment_=nr_match_.group('lbl')
+
+  return [nr_,comment_]
+
+def getMessage(line):
+  messsag_def_=re.search("TPWrite "+'"(.*)"'+semicolon,line)
+  call_data_=messsag_def_.group(0)
+  return call_data_
+
+# #get accuracy
 def createIF(routine,line,filestring,robCnt,scope,program):
   ifcondregex ="IF (?P<cond>[a-zA-Z0-9_]+)(?P<equal>[^a-zA-Z0-9_]+)(?P<value>[a-zA-Z0-9_]+) THEN"
   inif=0
@@ -462,7 +762,7 @@ def createIF(routine,line,filestring,robCnt,scope,program):
   conddef=re.search(ifcondregex,line)
   equal=conddef.group('equal')
   #notdef=conddef.group('not')
-  print "equal: %s" % equal
+  #print "equal: %s" % equal
   if conddef.group('equal')== "=":
     equal = "=="
   # elif notdef:
@@ -577,35 +877,46 @@ def createWhile(routine,line,filestring,robCnt,scope,program):
   
 
   
-def createComment(routine,line,filestring,robCnt,scope):
-  commentregex=r"!(?P<comment>[a-zA-Z0-9_]+)"
-  commentString=re.search(commentregex,line)
-  if scope:
-    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
-      s= scope.addStatement(VC_STATEMENT_COMMENT)
-  else:
-    s = routine.addStatement(VC_STATEMENT_COMMENT)
-  s.Comment=commentString.group('comment')
-  return s
+def getComment(line):
+  commentString = re.search("!(?P<comment>[a-zA-Z0-9_\-\s\:\/\=\>\[\]\.\,\(\)\*\!]+)", line)
+  comment_=commentString.group('comment')
+  return comment_
   
-def createBreak(scope):
+def getBreak(line):
+  break_data_=""
+  # if scope:
+  #   if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+  #     s= scope.addStatement(VC_STATEMENT_BREAK)
+  # else:
+  #   s = routine.addStatement(VC_STATEMENT_BREAK)
+  return break_data_
 
-  if scope:
-    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
-      s= scope.addStatement(VC_STATEMENT_BREAK)
+def getReturn(line):
+  return_data_=""
+  # if scope:
+  #   if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+  #     s= scope.addStatement(VC_STATEMENT_RETURN)
+  # else:
+  #   s = routine.addStatement(VC_STATEMENT_RETURN)
+  return return_data_
+
+def getCall(line):
+  #print "line:%s" %line
+  messsag_def_=re.search("Message "+'"MessageNo:(?P<Nr>[0-9]+)"'+comma+'"(?P<action>[a-zA-Z0-9_]+)"'+semicolon,line)
+  if messsag_def_:
+    call_data_=["Message",messsag_def_.group('Nr'),messsag_def_.group("action")]
+  elif re.search(
+      "WaitCond " + '"WaitNo:(?P<Nr>[0-9]+)"' + semicolon, line):
+    wait_cond_def_ = re.search(
+      "WaitCond " + '"WaitNo:(?P<Nr>[0-9]+)"'+ semicolon, line)
+    if wait_cond_def_:
+      call_data_ = ["WaitCond", wait_cond_def_.group('Nr'),""]
+  #return call_data_
   else:
-    s = routine.addStatement(VC_STATEMENT_BREAK)
-  return s	
+    call_def_=re.search("  (?P<routine>[a-zA-Z0-9_]+);",line)
+    call_data_ = [call_def_.group('routine'), "", ""]
+  return call_data_
 
-def createReturn(scope):
-
-  if scope:
-    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
-      s= scope.addStatement(VC_STATEMENT_RETURN)
-  else:
-    s = routine.addStatement(VC_STATEMENT_RETURN)
-  return s	  
-  
 def createCall(routine,line,filestring,robCnt,scope,callDef,program):  
 
   if scope:
@@ -623,7 +934,25 @@ def createCall(routine,line,filestring,robCnt,scope,callDef,program):
   print "callRoutine: %s" %callRoutine
   s.Routine=callRoutine
   return s
-  
+
+def getSetDO(line):
+  port_value_ = re.search(
+    "SetDO (?P<comment>[a-zA-Z0-9_]+)"+comma+"(?P<value>[a-zA-Z0-9]+);",line)
+  if not port_value_:
+    port_value_ = re.search(
+    "SetDo (?P<comment>[a-zA-Z0-9_]+)"+comma+"(?P<value>[a-zA-Z0-9]+);",line)
+
+  variable_type_="DO"#port_value_.group('var_type')
+
+
+  value_=port_value_.group('value')
+  comment_=port_value_.group('comment')
+  nr_def_=re.search("DO_"+"(?P<Nr>[0-9]+)",comment_)
+  variable_nr_=nr_def_.group('Nr')
+
+  set_data = [variable_type_, variable_nr_, value_,comment_]
+  return set_data
+
 def createSetBin(routine,line,filestring,robCnt,scope,program):
   SetBinregex = "SetDO do(?P<port>[a-zA-Z0-9]+),(?P<value>[a-zA-Z0-9]+);"
   if scope:
@@ -643,25 +972,46 @@ def createSetBin(routine,line,filestring,robCnt,scope,program):
   s.OutputValue=int(value)
   return s	
   
-def createWaitBin(routine,line,filestring,robCnt,scope,program):
-  WaitBinregex = "WaitDI di(?P<port>[a-zA-Z0-9_]+),(?P<value>[a-zA-Z0-9]+);"
-  if scope:
-    if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
-      s= scope.addStatement(VC_STATEMENT_WAITBIN)
-  else:
-    s = routine.addStatement(VC_STATEMENT_WAITBIN)
-  PortValue=re.search(WaitBinregex,line)
-  
-  port=PortValue.group('port')
-  value=PortValue.group('value')
-  
-  print "value: %s" %value
-  print "port: %s" %port
-  
-  s.InputPort=int(port)
-  s.InputValue=int(value)
-  return s	  
- 
+def getWait(line):
+  #WaitBinregex = "WaitDI di(?P<port>[a-zA-Z0-9_]+),(?P<value>[a-zA-Z0-9]+);"
+  # if scope:
+  #   if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+  #     s= scope.addStatement(VC_STATEMENT_WAITBIN)
+  # else:
+  #   s = routine.addStatement(VC_STATEMENT_WAITBIN)
+  comment_=["","","",""]
+  value_=["","","",""]
+  variable_type_=["","","",""]
+  variable_nr_=["","","",""]
+
+  if re.search("WaitTime", line):
+    time_value_ = re.search("WaitTime (?P<time>[0-9]+);", line)
+    #print "wait %s" % wait_data_[2]
+    if time_value_:
+      value_[0]= time_value_.group('time')
+    else: value_[0]='0'
+  elif re.search("WaitDI DI(?P<port>[a-zA-Z0-9_]+),(?P<value>[a-zA-Z0-9\s]+);",line):
+    port_value_=re.search("WaitDI (?P<port>[a-zA-Z0-9_]+),(?P<value>[a-zA-Z0-9\s]+);",line)
+
+    variable_type_ = "DI"  # port_value_.group('var_type')
+
+    value_ = port_value_.group('value')
+    comment_ = port_value_.group('comment')
+    nr_def_ = re.search("DI_" + "(?P<Nr>[0-9]+)", comment_)
+    variable_nr_ = nr_def_.group('Nr')
+
+  wait_data_ = [variable_type_, variable_nr_, value_, comment_]
+
+  return wait_data_
+
+def getSetVariable(line):
+  set_var_data_ = ["", ""]
+  if not re.findall("PERS",line):
+    var_def_=re.search("(?P<var1>[a-zA-Z0-9\s_]+)"+colon+eq+"(?P<var2>[a-zA-Z0-9\+_\s]+);",line)
+    if var_def_:
+      set_var_data_=[delChars(var_def_.group('var1')),"","",var_def_.group('var2'),"",""]
+  return set_var_data_
+
 def createSetProperty(routine,line,filestring,robCnt,scope,program):
   SetPropregex = "(?P<TargetProperty>[a-zA-Z0-9_]+) := (?P<value>[a-zA-Z0-9]+);"
   if scope:
@@ -676,7 +1026,20 @@ def createSetProperty(routine,line,filestring,robCnt,scope,program):
     PropertyValue=re.search(SetPropregex,line)
   s.TargetProperty=PropertyValue.group('TargetProperty')
   s.ValueExpression=PropertyValue.group('value')
-  
+
+def getWaitTime(line):
+  # Delayregex="WaitTime (?P<time>[a-zA-Z0-9]+);"
+  # if scope:
+  #   if(scope.ParentStatement.Type==VC_STATEMENT_IF or scope.ParentStatement.Type==VC_STATEMENT_WHILE):
+  #     s= scope.addStatement(VC_STATEMENT_DELAY)
+  # else:
+  #   s = routine.addStatement(VC_STATEMENT_DELAY)
+  #time_value_=re.search("WaitTime (?P<time>[a-zA-Z0-9_]+);",line)
+  time_value_ = re.search("WaitTime (?P<time>[0-9]+);", line)
+  if time_value_:
+    delay_data_=time_value_.group('time')
+  else: delay_data_=0
+  return delay_data_
   
 def createDelay(routine,line,filestring,robCnt,scope,program):
   Delayregex="WaitTime (?P<time>[a-zA-Z0-9]+);"
@@ -688,8 +1051,51 @@ def createDelay(routine,line,filestring,robCnt,scope,program):
   TimeValue=re.search(Delayregex,line)
   s.Delay=int(TimeValue.group('time'))
  
+def delChars(comment_):
+  # delete space
+  split_char_ = re.compile(r' ')
+  comment_split_ = split_char_.split(comment_)
+  if comment_split_:
+    i = 1
+    comment_ = ''
+    while i <= len(comment_split_):
+      comment_ += comment_split_[i - 1]
+      i = i + 1
 
-    
+  #delete :
+  split_char_ = re.compile(r':')
+  comment_split_ = split_char_.split(comment_)
+  if comment_split_:
+    i = 1
+    comment_ = ''
+    while i <= len(comment_split_):
+
+      comment_ += comment_split_[i - 1]
+      i = i + 1
+
+
+  #delete /
+  split_char_ = re.compile(r'/')
+  comment_split_ = split_char_.split(comment_)
+  if comment_split_:
+    i = 1
+    comment_ = ''
+    while i <= len(comment_split_):
+
+      comment_ += comment_split_[i - 1]
+      i = i + 1
+
+  #delete .
+  split_char_ = re.compile(r'\.')
+  comment_split_ = split_char_.split(comment_)
+  if comment_split_:
+    i = 1
+    comment_ = ''
+    while i <= len(comment_split_):
+
+      comment_ += comment_split_[i - 1]
+      i = i + 1
+  return comment_
   
   		
 #-------------------------------------------------------------------------------

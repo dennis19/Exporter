@@ -3,6 +3,7 @@ import re
 import os.path
 import vcMatrix
 import uploadBackup
+import IntermediateUploadABB
 sp = r'\s+'
 eq = r'\s*=\s*'
 comma = r'\s*,\s*'
@@ -92,77 +93,87 @@ def OnAbort():
 def OnStop():
   cleanUp()
 
-def getStatement(line,filestring):
-  if re.findall("  !",line):
-    statement_type_="Comment"
-    data_=getComment(line)
-    return [statement_type_,data_]
-  elif re.findall(":J ",line):
-    statement_type_="JointMovement"
-    data_=getMovementData(line,filestring,"joint")
-    return [statement_type_,data_]
-  elif re.findall(":L ",line):
-    statement_type_="LinearMovement"
-    data_ = getMovementData(line,filestring,"lin")
-    return [statement_type_,data_]
-  elif re.findall(" IF",line):
-    statement_type_="If"
-    data_=getIf(line)
-    return [statement_type_,data_]
-  elif re.findall("DO"+obracket+"(?P<Nr>[a-zA-Z0-9_]+)"+ '(?P<comment>(?:\s*:.*)?)'+cbracket+eq,line):
-    statement_type_ = "SetOutput"
-    data_=getSetDO(line)
-    return [statement_type_,data_]
-  elif re.findall("WAIT   "+"(?P<value>[\s.a-zA-Z0-9_]+)",line):
-    statement_type_="WaitTime"
-    data_=getWait(line)
-    return [statement_type_,data_]
-  elif re.findall("WAIT ",line):
-    statement_type_="Wait"
-    data_=getWait(line)
-    return [statement_type_,data_]
-  elif re.findall('SELECT',line):
-    statement_type_="Switch"
-    data_=getSelect(line,filestring)
-    return [statement_type_,data_]
-  elif re.findall("CALL",line):
-    statement_type_="Call"
-    data_=getCall(line)
-    return [statement_type_,data_]
-  elif re.findall("LBL",line)and not re.findall('JMP',line):
-    statement_type_="Label"
-    data_=getLabel(line)
-    return [statement_type_,data_]
-  elif re.findall('JMP',line):
-    statement_type_="Jump"
-    data_=getJMP(line)
-    return [statement_type_,data_]
-  elif re.findall('END',line):
-    statement_type_="Return"
-    data_=""
-    return [statement_type_,data_]
-  elif re.findall("MESSAGE",line):
-    statement_type_="Print"
-    data_=getMessage(line)
-    return [statement_type_,data_]
-  elif re.findall('UTOOL',line):
-    statement_type_="Tool"
-    data_=getGlobTool(line)
-    return [statement_type_,data_]
-  elif re.findall("UFRAME",line):
-    statement_type_="Frame"
-    data_=getGlobFrame(line)
-    return [statement_type_,data_]
-  elif re.findall(r"(?P<var_type>[a-zA-Z/!]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket+eq,line):
-    statement_type_="SetVariable"
-    data_=getSetVariable(line)
-    return [statement_type_,data_]
-  else:
-    #print "Statement not translated : %s" %line
-    statement_type_=""
-    data_=""
-    return [statement_type_,data_]
+def getStatementProducer(line,filestring,producer_):
+  if producer_=="ABB":
+    statement_data_=IntermediateUploadABB.getStatement(line,filestring)
+    #print "ABB"
 
+  elif producer_=="FANUC":
+    statement_data_ = getStatement(line, filestring)
+  return statement_data_
+
+def getStatement(line,filestring):
+  if re.findall("  !", line):
+    statement_type_ = "Comment"
+    data_ = getComment(line)
+    return [statement_type_, data_]
+  elif re.findall(":J ", line):
+    statement_type_ = "JointMovement"
+    data_ = getMovementData(line, filestring, "joint")
+    return [statement_type_, data_]
+  elif re.findall(":L ", line):
+    statement_type_ = "LinearMovement"
+    data_ = getMovementData(line, filestring, "lin")
+    return [statement_type_, data_]
+  elif re.findall(" IF", line):
+    statement_type_ = "If"
+    data_ = getIf(line)
+    return [statement_type_, data_]
+  elif re.findall("DO" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket + eq, line):
+    statement_type_ = "SetOutput"
+    data_ = getSetDO(line)
+    return [statement_type_, data_]
+  elif re.findall("WAIT   " + "(?P<value>[\s.a-zA-Z0-9_]+)", line):
+    statement_type_ = "WaitTime"
+    data_ = getWait(line)
+    return [statement_type_, data_]
+  elif re.findall("WAIT ", line):
+    statement_type_ = "Wait"
+    data_ = getWait(line)
+    return [statement_type_, data_]
+  elif re.findall('SELECT', line):
+    statement_type_ = "Switch"
+    data_ = getSelect(line, filestring)
+    return [statement_type_, data_]
+  elif re.findall("CALL", line):
+    statement_type_ = "Call"
+    data_ = getCall(line)
+    return [statement_type_, data_]
+  elif re.findall("LBL", line) and not re.findall('JMP', line):
+    statement_type_ = "Label"
+    data_ = getLabel(line)
+    return [statement_type_, data_]
+  elif re.findall('JMP', line):
+    statement_type_ = "Jump"
+    data_ = getJMP(line)
+    return [statement_type_, data_]
+  elif re.findall('END', line):
+    statement_type_ = "Return"
+    data_ = ""
+    return [statement_type_, data_]
+  elif re.findall("MESSAGE", line):
+    statement_type_ = "Print"
+    data_ = getMessage(line)
+    return [statement_type_, data_]
+  elif re.findall('UTOOL', line):
+    statement_type_ = "Tool"
+    data_ = getGlobTool(line)
+    return [statement_type_, data_]
+  elif re.findall("UFRAME", line):
+    statement_type_ = "Frame"
+    data_ = getGlobFrame(line)
+    return [statement_type_, data_]
+  elif re.findall(
+          r"(?P<var_type>[a-zA-Z/!]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket + eq,
+          line):
+    statement_type_ = "SetVariable"
+    data_ = getSetVariable(line)
+    return [statement_type_, data_]
+  else:
+    # print "Statement not translated : %s" %line
+    statement_type_ = ""
+    data_ = ""
+    return [statement_type_, data_]
 #read in JointMovement Data
 def getMovementData(line_,filestring_,type_):
   idx=0
@@ -376,18 +387,20 @@ def getComment(line):
   return comment_
 
 def getIf(line):
-
+  then_data_=[]
+  else_data=[]
   call_fct_=re.search(",CALL",line)
   if call_fct_:
-    sthen_="Call"
-    then_data_=getCall(line)
+    #sthen_="Call"
+    then_data_.append(["Call",getCall(line)])
   elif re.findall(",JMP",line):
-    sthen_="Jump"
-    then_data_=getJMP(line)
+    #sthen_="Jump"
+    then_data_.append(["Jump",getJMP(line)])
   elif re.findall(comma+r"(?P<var_type1>[a-zA-Z/!]+)" + obracket + "(?P<Nr1>[a-zA-Z0-9_]+)" + '(?P<comment1>(?:\s*:.*)?)' + cbracket + eq,line):
-    sthen_="SetVariable"
-    then_data_=getSetVariable(line)
-  return [sthen_,then_data_]
+    #sthen_="SetVariable"
+    then_data_.append(["SetVariable",getSetVariable(line)])
+  else_data.append("")
+  return [then_data_,else_data]
 
 def getSelect(line,filestring):
   in_select_=0
@@ -395,17 +408,30 @@ def getSelect(line,filestring):
   cases = []
   selse=[]
   case_number=[]
+  #then_data_=[]
   for line_select_ in filestring.split('\n'):
     select_choices_= re.search(eq+"(?P<Nr>[0-9_]+)"+comma,line_select_)
-
+    then_data_=[]
     if re.findall('ELSE,',line_select_):
       in_select_=0
       selse.append(getStatement(line_select_,filestring))
 
     if (line_nr_ == getLineNr(line_select_) and in_select_==0) or  (in_select_==1 and select_choices_):
       case_number.append(select_choices_.group('Nr'))
-      cases.append(getIf(line_select_))
-
+      #cases.append(getStatement(line_select_,filestring))
+      call_fct_ = re.search(",CALL", line_select_)
+      if call_fct_:
+        # sthen_="Call"
+        then_data_.append(["Call", getCall(line_select_)])
+      elif re.findall(",JMP", line_select_):
+        # sthen_="Jump"
+        then_data_.append(["Jump", getJMP(line_select_)])
+      elif re.findall(
+              comma + r"(?P<var_type1>[a-zA-Z/!]+)" + obracket + "(?P<Nr1>[a-zA-Z0-9_]+)" + '(?P<comment1>(?:\s*:.*)?)' + cbracket + eq,
+              line_select_):
+        # sthen_="SetVariable"
+        then_data_.append(["SetVariable", getSetVariable(line_select_)])
+      cases.append(then_data_)
       if in_select_==1:
         pass
       in_select_=1

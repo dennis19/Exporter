@@ -328,7 +328,7 @@ def getStatementData( statement ):
     line_data_[0]="Return"
     line_data_[1]=getReturn(statement)
   else:
-    print statement.Type
+    print "Statement %s not translated" %statement.Type
 
 
   #endif
@@ -575,9 +575,10 @@ def getSetVariable(statement):
   else:
 
     target_property_=statement.TargetProperty
-    #print "prop %s" % target_property_
+
     if not re.findall("Parameter_",target_property_):
-      set_var_data[0:2] = [type_def_.group("var_type"), type_def_.group("Nr"), type_def_.group("comment")]
+      #print "prop %s" % target_property_
+      set_var_data[0:2] = [target_property_, "", ""]
 
 
   type_def_=re.search(
@@ -607,7 +608,7 @@ def getSetVariable(statement):
     var_ = "AR"
     index_ = nr_def_.group("Nr")
   else:
-    print "setvar %s" %set_var_data[0]
+    #print "setvar %s" %set_var_data[0]
     if not (set_var_data[0] == "R" or set_var_data[0] == "F" or set_var_data[0] == "M"):
       if statement.ValueExpression == "1":
         var_ = "ON"
@@ -629,37 +630,44 @@ def getIf(statement):
   if_data_=[]
   #thenlabel = label
   #label += 1
+  thenlabel=[]
   elselabel = []
   #label += 1
   condition_=transformCondition(statement)
   if_data_.append(condition_)
   #print "condition %s" %condition_
-  if statement.ThenScope.Statements[0].Type == "Process":
-    if statement.ThenScope.Statements[0].getProperty("LabelNr"):
-      # thenlabel=statement.ThenScope.Statements[0].getProperty("LabelNr").Value
-      thenlabel=["Jump",getJMP(statement.ThenScope.Statements[0])]
-      #line += "IF %s,JMP LBL[%s];\n" % (condition_, thenlabel)
-    elif statement.ThenScope.Statements[0].getProperty("CallRoutine"):
-      thenlabel = getCall(statement.ThenScope.Statements[0])
-      # thenlabel=statement.ThenScope.Statements[0].getProperty("CallRoutine").Value
-      # if statement.ThenScope.Statements[0].getProperty("Parameter_1"):
-      #   line += "IF %s,CALL %s(%s" % (condition_, thenlabel,statement.ThenScope.Statements[0].getProperty("Parameter_1").Value)
-      #   if statement.ThenScope.Statements[0].getProperty("Parameter_2"):
-      #     line += ",%s" % (
-      #     statement.ThenScope.Statements[0].getProperty("Parameter_2").Value)
-      #   line+=");\n"
-  elif statement.ThenScope.Statements[0].Type == VC_STATEMENT_CALL:
-    thenlabel = getCall(statement.ThenScope.Statements[0])
+  for s in statement.ThenScope.Statements:
+    #print "state %s" %s.Type
+    state=getStatementData(s)
+    #print "state %s" %state
+    thenlabel.append(state)
+  # if statement.ThenScope.Statements[0].Type == "Process":
+  #   if statement.ThenScope.Statements[0].getProperty("LabelNr"):
+  #     # thenlabel=statement.ThenScope.Statements[0].getProperty("LabelNr").Value
+  #     thenlabel=["Jump",getJMP(statement.ThenScope.Statements[0])]
+  #     #line += "IF %s,JMP LBL[%s];\n" % (condition_, thenlabel)
+  #   elif statement.ThenScope.Statements[0].getProperty("CallRoutine"):
+  #     thenlabel = getCall(statement.ThenScope.Statements[0])
+  #     # thenlabel=statement.ThenScope.Statements[0].getProperty("CallRoutine").Value
+  #     # if statement.ThenScope.Statements[0].getProperty("Parameter_1"):
+  #     #   line += "IF %s,CALL %s(%s" % (condition_, thenlabel,statement.ThenScope.Statements[0].getProperty("Parameter_1").Value)
+  #     #   if statement.ThenScope.Statements[0].getProperty("Parameter_2"):
+  #     #     line += ",%s" % (
+  #     #     statement.ThenScope.Statements[0].getProperty("Parameter_2").Value)
+  #     #   line+=");\n"
+  # elif statement.ThenScope.Statements[0].Type == VC_STATEMENT_CALL:
+  #   thenlabel = getCall(statement.ThenScope.Statements[0])
     # thenlabel=statement.ThenScope.Statements[0].Routine.Name
     # line += "IF %s,CALL %s;\n" % (
     #   condition_, thenlabel)
   if_data_.append(thenlabel)
-  text_part_ += line
+
   #statementCount += 1
 
   for s in statement.ElseScope.Statements:
-    elselabel.append(writeStatement(s))
+    elselabel.append(getStatementData(s))
   if_data_.append(elselabel)
+  text_part_ += line
   #   statementCount += 1
   #line = "%4i: JMP LBL[%i];\n" % (statementCount, elselabel)
   #text_part_ += line
@@ -725,7 +733,7 @@ def getMotion(statement):
 
   pointIndex = statement.INDEX
 
-  uf = download.GetBaseIndex(statement, controller)
+  uf = statement.Base.Name#download.GetBaseIndex(statement, controller)
   #if uframe_num != uf:
     #uframe_num = uf
     #line += "UFRAME_NUM = %i ;\n" % (uf)
@@ -733,7 +741,7 @@ def getMotion(statement):
     #line += "%4i:  " % statementCount
     # endif
 
-  ut = download.GetToolIndex(statement, controller)
+  ut = statement.Tool.Name#download.GetToolIndex(statement, controller)
   #if utool_num != ut:
     #utool_num = ut
     #line += "UTOOL_NUM = %i ;\n" % (ut)
@@ -765,27 +773,12 @@ def getMotion(statement):
     posType = 'P'
   # endif
 
-
-
-  if re.findall(obracket+"(?P<Nr>[0-9_]+)"+'(?P<comment>(\s*:.*)?)'+cbracket,pName):
-    match_=re.search(obracket+"(?P<Nr>[0-9_]+)"+'(?P<comment>(\s*:.*)?)'+cbracket,pName)
-    if not match_.group('comment')=="":
-      if  match_.group('comment').split(":"):
-        pName=":"+match_.group('comment').split(":")[1]
-        #print "name:%s" % pName
-    else:
-      pName=match_.group('comment')
-  elif re.findall("P(?P<Nr>[0-9]+)", pName):
-      pName = ""
-  else:
-    pName=":"+pName
-
   if statement.Type == VC_STATEMENT_LINMOTION:
     # print "pos %s" %statement.Positions[0].PositionInWorld.P.X
     motion_data_=[uf,ut,"lin",posType,pointIndex,pName, statement.MaxSpeed, zone,""]
     #line += "L %s[%i%s]  %gmm/sec %s" % (posType, pointIndex, pName, statement.MaxSpeed, zone)
   elif statement.Type == VC_STATEMENT_PTPMOTION:
-    motion_data_ = [uf, ut, "joint", posType, pointIndex, pName, statement.JointSpeed*100, zone,""]
+    motion_data_ = [uf, ut, "joint", posType, pointIndex, pName, statement.JointSpeed, zone,""]
     #line += "J %s[%i%s]  %g%% %s" % (posType, pointIndex, pName, statement.JointSpeed * 100, zone)
   else:
     motion_data_ = [uf, ut, "lin", posType, pointIndex, pName, int(statement.getProperty('Speed').Value), zone, ""]
