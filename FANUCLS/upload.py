@@ -103,18 +103,16 @@ def addScript(comp_):
 def upload_programs(program_,infile,filename_):
   # initialization
   ###
-  routine_nr_=0
   global lineskip_, depth
   depth=0
   lineskip_ = [0, 0, 0, 0, 0, 0, 0, 0, 0,0,0,0,0,0,0,0,0,0,0]
   lineskip_[depth] = 0
-
+  line_cnt_=0
+  skip=0
   scope_ = None
   inst_flag_ = False
   instructions_ = ''
   executor_ = program_.Executor
-
-
 
   filestring_ = infile.read()
   infile.close()
@@ -125,7 +123,6 @@ def upload_programs(program_,infile,filename_):
     producer_="ABB"
     head_ = 'MODULE'
     filter_="*.mod"
-    #upload_programs(program_,infile,filename_)
   elif rob_cnt_.Name=="R30iA":
     producer_ = "FANUC"
     head_ = '/PROG'
@@ -181,15 +178,13 @@ def upload_programs(program_,infile,filename_):
         lineskip_[depth] = lineskip_[depth] - 1
         continue
       else:
-        statement_data_=IntermediateUpload.getStatementProducer(line_,filestring_,producer_)
-        createStatement(line_, rob_cnt_, routine_, program_, scope_,statement_data_)    # endif
+        statement_data_=IntermediateUpload.getStatementProducer(line_,filestring_,producer_,line_cnt_,skip)
+        createStatement(rob_cnt_, routine_, program_, scope_,statement_data_)    # endif
     instructions_ += line_ + '\n'
   # endfor
   routine_instructions_=''
   for routine in routine_.Program.Routines:
-    #print "routine %s" %routine.Name
     if not routine.Name== "PNS0001" and not routine== routine_:
-      #print "Reading routine %s" %routine.Name
       routine_file_ = glob.glob(filename_[0:len(filename_) - file_length_] + routine.Name+".ls" )
       if routine_file_:
         if len(routine.Statements)<3:
@@ -198,9 +193,7 @@ def upload_programs(program_,infile,filename_):
       #   # endif
         routine_instructions_ += line_ + '\n'
       else:
-        #print " \'%s\' is not a program file" % routine.Name
         pass
-  routine_nr_=routine_nr_+1
 
 
   return True
@@ -212,24 +205,21 @@ def OnStart():
     app_.messageBox("No program selected, aborting.","Warning",VC_MESSAGE_TYPE_WARNING,VC_MESSAGE_BUTTONS_OK)
     return
   #endif
-  routine_nr_=0
   global lineskip_, depth
   depth=0
   lineskip_ = [0, 0, 0, 0, 0, 0, 0, 0, 0,0,0,0,0,0,0,0,0,0,0]
   lineskip_[depth] = 0
-
+  line_cnt_=0
+  skip=0
   scope_ = None
   inst_flag_ = False
   instructions_ = ''
   executor_ = program_.Executor
-  #file_length_ = len(os.path.basename(filename_))
   rob_cnt_ = executor_.Controller
-  #print "controller %s" % rob_cnt_.Name
   if rob_cnt_.Name=="IRC5":
     producer_="ABB"
     head_ = 'MODULE'
     filter_="*.mod"
-    #upload_programs(program_,infile,filename_)
   elif rob_cnt_.Name=="R30iA":
     producer_ = "FANUC"
     head_ = '/PROG'
@@ -298,108 +288,68 @@ def OnStart():
       if pos_:
         break
 
-    # if move_data_:
-    #   program_.addRoutine(move_data_[0])
-    # endif
-    # create statements, if if then skip lines
     if inst_flag_:
       if lineskip_[depth] != 0:
         lineskip_[depth] = lineskip_[depth] - 1
         continue
       else:
-        statement_data_=IntermediateUpload.getStatementProducer(line_,filestring_,producer_)
+        statement_data_=IntermediateUpload.getStatementProducer(line_,filestring_,producer_,line_cnt_,skip)
+        line_cnt_=statement_data_[2]
         if statement_data_:
-          createStatement(line_, rob_cnt_, routine_, program_, scope_,statement_data_)
+          createStatement( rob_cnt_, routine_, program_, scope_,statement_data_)
     # endif
     instructions_ += line_ + '\n'
   # endfor
-
-  #upload_programs(program_,infile,filename_)
   return True
 
 
 #function parameter structure to follow: line,robCnt,routine,program,filestring,scope!
-def createStatement(line,robCnt,routine,program,scope,statement_data_):
-  global depth
-  depth=depth+1
+def createStatement(robCnt,routine,program,scope,statement_data_):
+  global depth,lineskip_
+  depth = depth + 1
 
   if statement_data_[0]=="Comment":
     s=createComment(routine,scope,statement_data_[1])
-    depth = depth - 1
-
   elif statement_data_[0]=="JointMovement":
     s=createPTP(robCnt,routine,scope,program,statement_data_[1])#+
-    depth = depth - 1
-
   elif statement_data_[0]=="LinearMovement":
     s=createLinear(robCnt,routine,scope,program,statement_data_[1])#+
-    depth = depth - 1
-
   elif statement_data_[0]=="If":
-    s=createIF(line,robCnt,routine,program,scope,statement_data_[1])#+
-    depth = depth - 1
-
+    s=createIF(robCnt,routine,program,scope,statement_data_[1])#+
+  elif statement_data_[0]=="While":
+    s=createWhile(robCnt,routine,program,scope,statement_data_[1])
   elif statement_data_[0]=="SetOutput":
     s=createSetDO(routine,scope,statement_data_[1])#+
-    depth = depth - 1
-
   elif statement_data_[0]=="WaitTime":
     s=createDelay(routine,scope,statement_data_[1])
-    depth = depth - 1
-
   elif statement_data_[0]=="Wait":
     s=createWaitDI(routine,scope,statement_data_[1])#+
-    depth = depth - 1
-
   elif statement_data_[0]=="Switch":
-    s=createSELECT(line,robCnt,routine,scope,program,statement_data_[1])
-    depth = depth - 1
-
+    s=createSELECT(robCnt,routine,scope,program,statement_data_[1])
   elif statement_data_[0]=="Call":
-    #print "scope %s" % scope
     s=createCall(routine,scope,program,statement_data_[1])
-    #print "name %s" % s.Routine.Name
-    depth = depth - 1
-
   elif statement_data_[0]=="Label":
     s=createLBL(routine,scope,statement_data_[1])
-    depth = depth - 1
-
   elif statement_data_[0]=="Jump":
     s=createJMP(routine,scope,statement_data_[1])
-    depth = depth - 1
-
   elif statement_data_[0]=="Return":
     s=createReturn(routine,scope)
-    depth = depth - 1
-
   elif statement_data_[0]=="Break":
     s=createBreak(routine,scope)
-    depth = depth - 1
-
   elif statement_data_[0]=="Print":
     s=createMessage(routine,scope,statement_data_[1])
-    depth = depth - 1
-
   elif statement_data_[0]=="Tool":
     s=setGlobTool(statement_data_[1])
-    depth = depth - 1
-
   elif statement_data_[0]=="Frame":
     s=setGlobFrame(statement_data_[1])
-    depth = depth - 1
-
   elif statement_data_[0]=="SetVariable":
     s= createAssignStatement(routine,scope,statement_data_[1])
-    depth = depth - 1
-
   elif statement_data_[0]=="":
-    depth=depth-1
     s=None
-
   else:
-    depth = depth - 1
     s = None
+
+  depth=depth-1
 
   return s
 
@@ -429,7 +379,6 @@ def readPos(s,robCnt,type,program,move_data_):
   rob_cnt_ = exec_.Controller
   kin_ = rob_cnt_.Kinematics
   comp_ = kin_.Component
-  #print "move %s" %move_data_[1]
   if type=="joint":
     if move_data_[1][1] == "":
 
@@ -446,7 +395,14 @@ def readPos(s,robCnt,type,program,move_data_):
 
       if comp_.getProperty("Registers::R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])):
         s.MaxSpeed = int(comp_.getProperty("Registers::R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])).Value)
-
+  if not move_data_[7][1]=="":
+    if comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])):
+      s.AccuracyValue = int(comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])).Value)
+  else:
+    if not move_data_[7][0]=='fine':
+      s.AccuracyValue=int(move_data_[7][0])
+    else:
+      s.AccuracyValue=0
 
   m = vcMatrix.new()
   m.translateAbs(move_data_[2][0], move_data_[2][1], move_data_[2][2])
@@ -545,7 +501,6 @@ def createToolOffset(program,routine_,scope_,move_data_):
   ph_.Script = TOOL_OFFSET_SCRIPT()
   s.Process = ph_
   s.Name = 'ToolOffset'
-  #s.Base=base
   if not glob_tool_ == "":
     if glob_tool_=="0":
       s.Tool=rob_cnt_.Tools[0]
@@ -566,72 +521,67 @@ def createToolOffset(program,routine_,scope_,move_data_):
   return s
 
 
-def createSELECT(line,robCnt,routine,scope,program,select_data_):
+def createSELECT(robCnt,routine,scope,program,select_data_):
   i=0
   k=0
 
-  while i<len(select_data_[0]):
+  while i<len(select_data_[1]):
     j=0
-    #print "selectdrei %s" %select_data_[0][i]
-    if select_data_[0][i]:
+    if select_data_[1][i]:
       s = addStatement(scope, routine, VC_STATEMENT_IF)
-      while j<len(select_data_[0][i]):
-        #print "select %s" %select_data_[0][i][j][0]
-        sthen=createStatement(line, robCnt, routine, program, s.ThenScope,select_data_[0][i][j])
+      while j<len(select_data_[1][i]):
+        sthen=createStatement(robCnt, routine, program, s.ThenScope,select_data_[1][i][j])
         s.ThenScope.Statements.append(sthen)
-        j += 1
         setLineSkip()
-      s.Condition = makeConodition(line, 'SELECT', s, select_data_,robCnt) + select_data_[1][i]
+        j += 1
+      s.Condition = makeConodition( 'SELECT', s, select_data_[0],robCnt) + select_data_[2][i]
 
     i=i+1
-    #s_end_ = s
-  #print "end :%s" %s_end_
-  while k<len(select_data_[2]):
-    if select_data_[2][k]:
-      selse = createStatement(line, robCnt, routine, program, s.ElseScope,select_data_[2][k])
+  while k<len(select_data_[3]):
+    if select_data_[3][k]:
+      selse = createStatement(robCnt, routine, program, s.ElseScope,select_data_[3][k])
       if selse:
         s.ElseScope.Statements.append(selse)
     setLineSkip()
     k=k+1
-  # setLineSkip()
-  # setLineSkip()
   if robCnt.Name=="IRC5":
     setLineSkip()
     setLineSkip()
-  #print "state %s" % s_end_.Type
   return s
 
 
-def createIF(line,robCnt,routine,program,scope,if_data_):
+def createIF(robCnt,routine,program,scope,if_data_):
+
   #create IfStatement
   s = addStatement(scope, routine, VC_STATEMENT_IF)
-  s.Condition=makeConodition(line,'IF',s,if_data_,robCnt)
-
-
-  #print "type %s" %if_data_[0][0][0]
-  if if_data_[0][0]:
-    sthen=createStatement(line,robCnt,routine,program,s.ThenScope ,if_data_[0][0])
+  s.Condition=makeConodition('IF',s,if_data_[0],robCnt)
+  for then_data_ in if_data_[1]:
+    sthen=createStatement(robCnt,routine,program,s.ThenScope ,then_data_)
     s.ThenScope.Statements.append(sthen)
     setLineSkip()
-  if not if_data_[1][0]=="":
-    selse=createStatement(line,robCnt,routine,program,s.ElseScope ,if_data_[1][0])
-    s.ElseScope.Statements.append(selse)
+  if not if_data_[2][0]=="":
+    for else_data_ in if_data_[2]:
+      selse=createStatement(robCnt,routine,program,s.ElseScope ,else_data_)
+      s.ElseScope.Statements.append(selse)
+      setLineSkip()
+
+  return s
+
+def createWhile(robCnt,routine,program,scope,while_data_):
+  #create IfStatement
+  s = addStatement(scope, routine, VC_STATEMENT_WHILE)
+  s.Condition=makeConodition('WHILE',s,while_data_[0],robCnt)
+
+
+  for data_ in while_data_[1]:
+    s_while_=createStatement(robCnt,routine,program,s.Scope,data_)
+
+    s.Scope.Statements.append(s_while_)
     setLineSkip()
-  # if if_data_[0]=="Call":
-  #   sthen=createCall(routine, s.ThenScope, program,if_data_[1])
-  #   s.ThenScope.Statements.append(sthen)
-  # elif if_data_[0]=="Jump":
-  #   sthen=createJMP(routine, s.ThenScope,if_data_[1])
-  #   s.ThenScope.Statements.append(sthen)
-  # elif if_data_[0] == "SetVariable":
-  #   sthen=createAssignStatement(routine,s.ThenScope,if_data_[1])
-  #   s.ThenScope.Statements.append(sthen)
 
   return s
 
 def createPTP(robCnt,routine,scope,program,move_data_):
-  #print "move :%s" %move_data_
-  #print "move :%s" % move_data_[0]
   if program.findRoutine("POSREG_"+move_data_[0]):
     callRoutine = program.findRoutine("POSREG_"+move_data_[0] )
     s = addStatement(scope, routine, VC_STATEMENT_CALL)
@@ -645,7 +595,6 @@ def createLinear(robCnt,routine,scope,program,move_data_):
   if not move_data_[6]==["",""]:
     s= createToolOffset(program,routine,scope,move_data_)
   else:
-    #print "move :%s" %move_data_ [0]
     if program.findRoutine("POSREG_"+move_data_[0]):#re.search("PR" + obracket, move_data_[0]):
       callRoutine = program.findRoutine("POSREG_"+move_data_[0] )
       s = addStatement(scope, routine, VC_STATEMENT_CALL)
@@ -665,7 +614,7 @@ def createSetDO(routine,scope,set_data):
     s.OutputValue=1
   elif set_data[2] == 'OFF':
     s.OutputValue=0
-  elif set_data[2]==0 or set_data[2]==1:
+  elif set_data[2]=="1" or set_data[2]=="0":
     s.OutputValue=int(set_data[2])
   else:
     s.OutputValue=1
@@ -674,9 +623,7 @@ def createSetDO(routine,scope,set_data):
 
 def createDelay( routine, scope,wait_data_):
   s=addStatement(scope, routine, VC_STATEMENT_DELAY)
-
   s.Delay= float(wait_data_[2][0])
-
   return s
 
 def createWaitDI(routine,scope,wait_data):
@@ -744,10 +691,10 @@ def createCall(routine,scope,program,call_data):
       print "Routine %s created" %callRoutine.Name
     if call_data[1]:
       i=0
-      s.createProperty(VC_INTEGER, 'Parameter_1')
-      s.getProperty('Parameter_1').Value = int(call_data[1])
+      s.createProperty(VC_STRING, 'Parameter_1')
+      s.getProperty('Parameter_1').Value = call_data[1]
       if not callRoutine.getProperty('Parameter_1'):
-        callRoutine.createProperty(VC_INTEGER, 'Parameter_1')
+        callRoutine.createProperty(VC_STRING, 'Parameter_1')
       if len(callRoutine.Statements)==0:
         createAssign(callRoutine, scope, callRoutine.getProperty('Parameter_1').Name, call_data[2])
       else:
@@ -928,42 +875,44 @@ def createAssign(routine_,scope_,var_,value_):
     s.TargetProperty=str(var_)
   return s
 
-def makeConodition(line,if_sel_,statement,if_data_,robCnt):
+def makeConodition(if_sel_,statement,cond_,robCnt):
   cond_all_=''
   cond_all_conv_=''
   char_skip=0
-  #print "charskip %s" %getCharSkip(line)
   if robCnt.Name == "R30iA":
     if if_sel_=='IF':
-      char_skip=10
+      char_skip=getCharSkip(cond_)+3
     elif if_sel_=='SELECT':
-      char_skip=14
+      char_skip=getCharSkip(cond_)+7
   elif robCnt.Name == "IRC5":
     if if_sel_=='IF':
-      char_skip = getCharSkip(line)+3
+      char_skip = getCharSkip(cond_)+3
     elif if_sel_=='SELECT':
-      char_skip=getCharSkip(line)+5
-
-
-  while re.search(r"(?P<signs>[\(\)\!\s\,]+)", line[len(cond_all_) + char_skip]) or re.search(r"(?P<var_type>[a-zA-Z]+)" + obracket ,
-                 line[len(cond_all_) + char_skip:len(cond_all_) + char_skip + 4]) or re.search(r"(?P<logic>[a-zA-Z]+)", line[len(cond_all_) + char_skip]):
+      char_skip=getCharSkip(cond_)+5
+    elif if_sel_=='WHILE':
+      char_skip = getCharSkip(cond_) + 6
+  while re.search(r"(?P<signs>[\(\)\!\s\,]+)", cond_[len(cond_all_) + char_skip]) or re.search(
+            r"(?P<var_type>[a-zA-Z]+)" + obracket,
+            cond_[len(cond_all_) + char_skip:len(cond_all_) + char_skip + 4]) or re.search(r"(?P<logic>[a-zA-Z]+)", cond_[
+      len(cond_all_) + char_skip]):
     if robCnt.Name == "R30iA":
-      condition_ = IntermediateUpload.getCondition(line, cond_all_, char_skip)
+      condition_ = IntermediateUpload.getCondition(cond_, cond_all_, char_skip)
     elif robCnt.Name == "IRC5":
-      condition_ = IntermediateUploadABB.getCondition(line, cond_all_, char_skip)
+      condition_ = IntermediateUploadABB.getCondition(cond_, cond_all_, char_skip)
     cond_all_+=condition_[0]+condition_[1]+condition_[2]+condition_[3]+condition_[4]+condition_[5]+condition_[6]
-    #print "cond_all %s" %cond_all_
-    #print "condition : %s" %condition_[0]
     if re.findall('DI', condition_[0]):
       condition_[0] = 'IN[' + condition_[2] + ']'
       comment_property="Comment%s"%condition_[2]
       statement.createProperty(VC_STRING,comment_property)
       statement.getProperty(comment_property).Value=condition_[3]
     elif re.findall('DO',condition_[0]):
-      condition_[0] = 'OUT[' + condition_[2] + ']'
-      comment_property="Comment%s"%condition_[2]
-      statement.createProperty(VC_STRING,comment_property)
-      statement.getProperty(comment_property).Value=condition_[3]
+      if not condition_[2]=="":
+        condition_[0] = 'OUT[' + condition_[2] + ']'
+        comment_property="Comment%s"%condition_[2]
+        statement.createProperty(VC_STRING,comment_property)
+        statement.getProperty(comment_property).Value=condition_[3]
+      else:
+        break
     elif re.findall('AR' + obracket, condition_[0]+condition_[1]):
       condition_[0]=statement.ParentRoutine.getProperty("Parameter_%s" %condition_[2]).Name
     elif re.findall('R' + obracket, condition_[0]+condition_[1]):
@@ -994,10 +943,13 @@ def makeConodition(line,if_sel_,statement,if_data_,robCnt):
       condition_[0] = '&&'
     elif condition_[0] == "OR":
       condition_[0] = '||'
+    elif condition_[0]=="NOT":
+      condition_[0] ="!"
     elif condition_[0]==',':
       break
     elif condition_[0]=="THEN":
       break
+
     if condition_[6] == "ON" or condition_[6]=="TRUE":
       condition_[6] = '1'
     elif condition_[6] == "OFF"or condition_[6]=="FALSE":
@@ -1009,8 +961,8 @@ def makeConodition(line,if_sel_,statement,if_data_,robCnt):
     if if_sel_=='SELECT':
       condition_[6]=""
 
-    cond_all_conv_ += condition_[0]+condition_[5]+condition_[6]#+condition_[1]+condition_[2]
-    if len(cond_all_)+char_skip==len(line):
+    cond_all_conv_ += condition_[0]+condition_[5]+condition_[6]
+    if len(cond_all_)+char_skip==len(cond_):
       return cond_all_conv_
   return cond_all_conv_
 
@@ -1029,13 +981,14 @@ def getLineNr(line):
     return line_nr_
   else:
     return ""
+
 def setLineSkip():
   global lineskip_,depth
   i=0
-
   while i<=depth-1:
     lineskip_[i]=lineskip_[i]+1
     i=i+1
+
 def getCharSkip(line):
   i=0
   char_skip_=0

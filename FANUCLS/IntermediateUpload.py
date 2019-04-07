@@ -93,87 +93,80 @@ def OnAbort():
 def OnStop():
   cleanUp()
 
-def getStatementProducer(line,filestring,producer_):
+#translate statement depending on producer in intermediate language
+def getStatementProducer(line,filestring,producer_,line_cnt_,skip):
+
+  #print "line cnt %s" %line_cnt_
   if producer_=="ABB":
-    statement_data_=IntermediateUploadABB.getStatement(line,filestring)
-    #print "ABB"
+    statement_data_=IntermediateUploadABB.getStatement(line,filestring,line_cnt_,skip)
 
   elif producer_=="FANUC":
     statement_data_ = getStatement(line, filestring)
+    statement_data_.append(0)
+  line_cnt_=statement_data_[2]
+  statement_data_.append(line_cnt_)
   return statement_data_
 
+# read in line to find command and get data for statement (FANUC)
 def getStatement(line,filestring):
+
   if re.findall("  !", line):
     statement_type_ = "Comment"
     data_ = getComment(line)
-    return [statement_type_, data_]
   elif re.findall(":J ", line):
     statement_type_ = "JointMovement"
     data_ = getMovementData(line, filestring, "joint")
-    return [statement_type_, data_]
   elif re.findall(":L ", line):
     statement_type_ = "LinearMovement"
     data_ = getMovementData(line, filestring, "lin")
-    return [statement_type_, data_]
   elif re.findall(" IF", line):
     statement_type_ = "If"
-    data_ = getIf(line)
-    return [statement_type_, data_]
+    data_ = getIf(line,filestring)
   elif re.findall("DO" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket + eq, line):
     statement_type_ = "SetOutput"
     data_ = getSetDO(line)
-    return [statement_type_, data_]
   elif re.findall("WAIT   " + "(?P<value>[\s.a-zA-Z0-9_]+)", line):
     statement_type_ = "WaitTime"
     data_ = getWait(line)
-    return [statement_type_, data_]
   elif re.findall("WAIT ", line):
     statement_type_ = "Wait"
     data_ = getWait(line)
-    return [statement_type_, data_]
   elif re.findall('SELECT', line):
     statement_type_ = "Switch"
     data_ = getSelect(line, filestring)
-    return [statement_type_, data_]
   elif re.findall("CALL", line):
     statement_type_ = "Call"
     data_ = getCall(line)
-    return [statement_type_, data_]
   elif re.findall("LBL", line) and not re.findall('JMP', line):
     statement_type_ = "Label"
     data_ = getLabel(line)
-    return [statement_type_, data_]
   elif re.findall('JMP', line):
     statement_type_ = "Jump"
     data_ = getJMP(line)
-    return [statement_type_, data_]
   elif re.findall('END', line):
     statement_type_ = "Return"
     data_ = ""
-    return [statement_type_, data_]
   elif re.findall("MESSAGE", line):
     statement_type_ = "Print"
     data_ = getMessage(line)
-    return [statement_type_, data_]
   elif re.findall('UTOOL', line):
     statement_type_ = "Tool"
     data_ = getGlobTool(line)
-    return [statement_type_, data_]
   elif re.findall("UFRAME", line):
     statement_type_ = "Frame"
     data_ = getGlobFrame(line)
-    return [statement_type_, data_]
   elif re.findall(
           r"(?P<var_type>[a-zA-Z/!]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket + eq,
           line):
     statement_type_ = "SetVariable"
     data_ = getSetVariable(line)
-    return [statement_type_, data_]
   else:
-    # print "Statement not translated : %s" %line
+    print "Statement not translated : %s" %line
     statement_type_ = ""
     data_ = ""
-    return [statement_type_, data_]
+
+  return [statement_type_, data_]
+
 #read in JointMovement Data
 def getMovementData(line_,filestring_,type_):
   idx=0
@@ -188,6 +181,7 @@ def getMovementData(line_,filestring_,type_):
   skip = 1
   point_=""
   speed_=0
+  acc_=0
   offset_data_=["",""]
   posname = re.search(pnum_,line_)
   #read in speed and coordinates
@@ -195,6 +189,7 @@ def getMovementData(line_,filestring_,type_):
     point_="P["+posname.group('pnum')+"]"
 
     speed_=getSpeed(line_,type_)
+    acc_=getAccuracy(line_)
     for lineFindPos in filestring_.split('\n'):
       FindPosMatch=re.findall('P'+obracket+posname.group('pnum')+cbracket+obrace,lineFindPos)
       if FindPosMatch:
@@ -229,13 +224,13 @@ def getMovementData(line_,filestring_,type_):
     posr_name_=re.search(prnum,line_)
     point_="PR["+posr_name_.group('pnum') + posr_name_.group('comment')+"]"
     speed_=getSpeed(line_,type_)
+  # get Tooloffset
   if re.findall("Tool_Offset,PR",line_):
     offset_data_=getToolOffset(line_)
 
-  #print "WPR %s,%s,%s point %s" %(idp,idr,idw,point_)
 
   coordinates_=[idx,idy,idz,idw,idp,idr]
-  moveData=[point_,speed_,coordinates_,cfgData,base,tool,offset_data_]
+  moveData=[point_,speed_,coordinates_,cfgData,base,tool,offset_data_,acc_]
   return moveData
 
 def getToolOffset(line):
@@ -253,6 +248,23 @@ def getToolOffset(line):
     return [offset_pos_,pos_]
 
 
+def getAccuracy(line):
+  # print "line %s" %line
+  acc_data_=["",""]
+  if re.search("CNT"+"(?P<Nr>[0-9_]+)",line):
+    acc_def_=re.search("CNT"+"(?P<Nr>[0-9_]+)",line)
+    acc_data_[0]=acc_def_.group('Nr')
+  elif re.search("CNT "+rnum,line):
+    acc_def_=re.search("CNT "+rnum, line)
+    comment = acc_def_.group('comment')
+    register = acc_def_.group('pnum')
+    acc_data_[0] = register
+    acc_data_[1] = comment.split("]")[0]
+  elif re.search("FINE",line):
+    acc_data_[0]="fine"
+
+  return acc_data_
+
 def getSpeed(line_, type_):
   speed_data=["",""]
   if re.search(r" R" + obracket, line_):
@@ -269,12 +281,10 @@ def getSpeed(line_, type_):
 
     speed_ = re.search(r"(?P<speed>[a-zA-Z0-9_]+)%", line_)
     speed_data[0] = speed_.group('speed')
-    print "speed %s" % speed_data[0]
-      #acc?
   elif type_ == "lin":
     speed_ = re.search(r"(?P<speed>[a-zA-Z0-9_]+)mm", line_)
     speed_data[0]=speed_.group('speed')
-      # acc?
+
 
   return speed_data
 
@@ -386,21 +396,17 @@ def getComment(line):
   comment_=commentString.group('comment')
   return comment_
 
-def getIf(line):
+def getIf(line,filestring):
   then_data_=[]
   else_data=[]
-  call_fct_=re.search(",CALL",line)
-  if call_fct_:
-    #sthen_="Call"
-    then_data_.append(["Call",getCall(line)])
-  elif re.findall(",JMP",line):
-    #sthen_="Jump"
-    then_data_.append(["Jump",getJMP(line)])
-  elif re.findall(comma+r"(?P<var_type1>[a-zA-Z/!]+)" + obracket + "(?P<Nr1>[a-zA-Z0-9_]+)" + '(?P<comment1>(?:\s*:.*)?)' + cbracket + eq,line):
-    #sthen_="SetVariable"
-    then_data_.append(["SetVariable",getSetVariable(line)])
+
+  cond_def_=re.search("IF "+r'(.*)'+comma,line)
+  cond_=cond_def_.group(0)
+
+  #condition_
+  then_data_.append(getStatement(line[7:],filestring))
   else_data.append("")
-  return [then_data_,else_data]
+  return [cond_,then_data_,else_data]
 
 def getSelect(line,filestring):
   in_select_=0
@@ -408,7 +414,9 @@ def getSelect(line,filestring):
   cases = []
   selse=[]
   case_number=[]
-  #then_data_=[]
+  cond_def_=re.search("SELECT "+r'(.*)'+comma,line)
+  cond_=cond_def_.group(0)
+
   for line_select_ in filestring.split('\n'):
     select_choices_= re.search(eq+"(?P<Nr>[0-9_]+)"+comma,line_select_)
     then_data_=[]
@@ -418,18 +426,14 @@ def getSelect(line,filestring):
 
     if (line_nr_ == getLineNr(line_select_) and in_select_==0) or  (in_select_==1 and select_choices_):
       case_number.append(select_choices_.group('Nr'))
-      #cases.append(getStatement(line_select_,filestring))
       call_fct_ = re.search(",CALL", line_select_)
       if call_fct_:
-        # sthen_="Call"
         then_data_.append(["Call", getCall(line_select_)])
       elif re.findall(",JMP", line_select_):
-        # sthen_="Jump"
         then_data_.append(["Jump", getJMP(line_select_)])
       elif re.findall(
               comma + r"(?P<var_type1>[a-zA-Z/!]+)" + obracket + "(?P<Nr1>[a-zA-Z0-9_]+)" + '(?P<comment1>(?:\s*:.*)?)' + cbracket + eq,
               line_select_):
-        # sthen_="SetVariable"
         then_data_.append(["SetVariable", getSetVariable(line_select_)])
       cases.append(then_data_)
       if in_select_==1:
@@ -437,7 +441,7 @@ def getSelect(line,filestring):
       in_select_=1
       continue
 
-  return [cases,case_number,selse]
+  return [cond_,cases,case_number,selse]
 
 def getGlobFrame(line):
   tool_def_=re.search("UFRAME_NUM"+eq+"(?P<Nr>[0-9_]+)",line)

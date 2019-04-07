@@ -3,6 +3,7 @@ import time
 from decimal import *
 import download
 import re
+import IntermediateConvertABB
 sp = r'\s+'
 eq = r'\s*=\s*'
 comma = r'\s*,\s*'
@@ -477,10 +478,10 @@ def getSetOutput(statement):
   set_output_data_=["","",""]
   if statement.OutputPort < 1000:
     set_output_data_[0]=statement.OutputPort
-    if statement.OutputValue==1:
-      set_output_data_[2] ="ON"
-    elif statement.OutputValue==0:
-      set_output_data_[2] ="OFF"
+    # if statement.OutputValue==1:
+    #   set_output_data_[2] ="ON"
+    # elif statement.OutputValue==0:
+    set_output_data_[2] =statement.OutputValue
     if not statement.Name=="":
       set_output_data_[1]=statement.Name
   # endif
@@ -633,7 +634,10 @@ def getIf(statement):
   thenlabel=[]
   elselabel = []
   #label += 1
-  condition_=transformCondition(statement)
+  if statement.ParentRoutine.Program.Executor.Controller.Name=="R30iA":
+    condition_=transformConditionFanuc(statement)
+  elif statement.ParentRoutine.Program.Executor.Controller.Name=="IRC5":
+    condition_ = transformConditionAbb(statement)
   if_data_.append(condition_)
   #print "condition %s" %condition_
   for s in statement.ThenScope.Statements:
@@ -749,7 +753,9 @@ def getMotion(statement):
     #line += "%4i:  " % statementCount
     # endif
 
-  zone = 'FINE'
+  zone = s.AccuracyValue
+  if zone==0:
+    zone='FINE'
   pName = statement.Positions[0].Name
   #print "name:%s" %pName
   if pName[:2] == 'PR':
@@ -805,7 +811,7 @@ def getReturn(statement):
 def getMessage(statement):
   return statement.Message
 
-def transformCondition(statement):
+def transformConditionFanuc(statement):
   i=0
   transformed_condition_=""
 
@@ -864,6 +870,103 @@ def transformCondition(statement):
           i+=len("IN"+"["+type_def_.group("Nr")+"]")+equal_
         elif type_=="OUT":
           type_="DO"+"["+type_def_.group("Nr")+statement.getProperty("Comment%s"%type_def_.group("Nr")).Value+"]"
+          transformed_condition_ +=type_
+          i+=len("OUT"+"["+type_def_.group("Nr")+"]")
+
+        else:
+          transformed_condition_ += type_
+          i=i+len(type_)
+
+      elif re.search(r"(?P<regType>[a-zA-Z]+)"+"::",statement.Condition[i:i+12]):
+        type_def_=re.search(
+          r"(?P<regType>[a-zA-Z]+)" + "::" + r"(?P<var_type>[a-zA-Z]+)" + "(?P<Nr>[0-9_]+)" + r"(?P<comment>[a-zA-Z0-9\._]+)",
+          statement.Condition[i:])
+        reg_type=type_def_.group("regType")
+        type_ = type_def_.group("var_type")
+        index_=type_def_.group("Nr")
+        comment_=type_def_.group("comment")
+        #print "ccomment :%s" %comment_
+
+
+        transformed_condition_ += type_+"["+index_+":"+comment_+"]"#statement.Condition[i]
+        #print "char:%s" % statement.Condition[i]
+        i=i+len(reg_type+type_+index_+comment_)+2
+        #i=i+1
+
+
+      else:
+        #print "char:%s" %statement.Condition[i]
+        transformed_condition_ += statement.Condition[i]
+        i=i+1
+
+
+
+    else:
+      transformed_condition_ += statement.Condition[i]
+      i=i+1
+
+
+  return transformed_condition_
+
+def transformConditionAbb(statement):
+  i=0
+  transformed_condition_=""
+
+  while i<len(statement.Condition):
+    #transformed_condition_+=statement.Condition[i]
+    #print "cond %s" % statement.Condition[i]
+    if re.findall(r"(?P<signs>[\!\=\&\|]+)",statement.Condition[i]):
+      sign_def = re.search(r"(?P<signs>[\!\=\&\|]+)",statement.Condition[i:i+2])
+      sign_ = sign_def.group("signs")
+      i = i + len(sign_)
+      if sign_=="==":
+        sign_="="
+      elif sign_=="!=":
+        sign_="<>"
+      elif sign_=="&&":
+        sign_="AND"
+      elif sign_=="||":
+        sign_="OR"
+      transformed_condition_ += sign_
+    elif re.findall("Parameter_"+"(?P<Nr>[0-9_]+)", statement.Condition[i:i+11]):
+      type_def_=re.search("Parameter_"+"(?P<Nr>[0-9_]+)", statement.Condition[i:i+11])
+      type_="AR["+type_def_.group('Nr')+"]"
+      transformed_condition_+=type_
+      i+=len("Parameter_"+type_def_.group('Nr'))
+    elif re.findall(r"(?P<var_type>[a-zA-Z]+)",statement.Condition[i]):
+      type_def_=re.search(r"(?P<var_type>[a-zA-Z]+)"+obracket+"(?P<Nr>[0-9_]+)"+cbracket,statement.Condition[i:i+9])
+
+      if type_def_:
+        value_=""
+        sign_=""
+        equal_=0
+        equal_def_=re.search(r"(?P<signs>[\=\!]+)"+"(?P<value>[0-9_]+)",statement.Condition[i:i+11])
+
+        type_ = type_def_.group("var_type")
+        #print "nr :%s" %type_def_.group("value")
+        if equal_def_:
+          value_=equal_def_.group("value")
+          sign_ = equal_def_.group("signs")
+          equal_=len(equal_def_.group('signs')+equal_def_.group("value"))
+          #print "char %s" % sign_
+
+        #i = i + len(sign_)
+        if sign_ == "==":
+          sign_ = "="
+        # elif sign_=="!=":
+        #   sign_="<>"
+        # if value_=='0':
+        #   value_="OFF"
+        # elif  value_=='1':
+        #   value_="ON"
+
+        if type_=="IN":
+          #print "nr %s"%type_def_.group("Nr")
+          type_="DI"+"_"+type_def_.group("Nr")+"_"+statement.getProperty("Comment%s"%type_def_.group("Nr")).Value+sign_+value_
+          transformed_condition_ +=type_
+          i+=len("IN"+"["+type_def_.group("Nr")+"]")+equal_
+        elif type_=="OUT":
+          type_="DO"+"_"+type_def_.group("Nr")+"_"+statement.getProperty("Comment%s"%type_def_.group("Nr")).Value
           transformed_condition_ +=type_
           i+=len("OUT"+"["+type_def_.group("Nr")+"]")
 

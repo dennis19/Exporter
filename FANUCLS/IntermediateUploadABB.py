@@ -363,8 +363,20 @@ def getGlobPos(line):
   return move_data_
 
 
-def getStatement( line, filestring):
-  #print "line %s" %line
+def getStatement( line, filestring,line_cnt_,skip_):
+  global count,skip
+  count = line_cnt_
+  if skip_==0:
+    skip = skip_
+  if not skip == 0:
+    skip = skip - 1
+    return [None,None,count]
+
+
+  count+=1
+
+    #print "line cnt%s" %line_cnt_
+  print "line cnt %s" %count
   if re.findall("MoveJ",line):
     data_ = getMovementData(line,filestring)
     statement_type_="JointMovement"
@@ -385,10 +397,13 @@ def getStatement( line, filestring):
     statement_type_="Print"
   elif re.findall(" IF", line):
     #print "line %s" %line
-    data_=getIf(line,filestring)
+    data_=getIf(line,filestring,count)
     statement_type_="If"
+  elif re.findall(" WHILE",line):
+    data_=getWhile(line,filestring,count)
+    statement_type_="While"
   elif re.findall(" TEST ",line):
-    data_=getSelect(line,filestring)
+    data_=getSelect(line,filestring,count)
     statement_type_="Switch"
   elif re.findall("BREAK;", line):
     data_=getBreak(line)
@@ -399,10 +414,10 @@ def getStatement( line, filestring):
   elif re.findall("GOTO",line):
     statement_type_ = "Jump"
     data_ = getJump(line)
-  elif re.findall("WaitTime", line):
+  elif re.findall(" WaitTime ", line):
     data_=getWait(line)
     statement_type_="WaitTime"
-  elif re.findall('Message "',line)or re.findall("WaitCond",line):
+  elif re.findall('Message "',line)or re.findall('WaitCond "',line):
     data_=getCall(line)
     statement_type_="Call"
   elif re.findall("(?P<var1>[a-zA-Z0-9_]+)"+colon+eq+"(?P<var2>[a-zA-Z0-9_]+);",line):
@@ -413,7 +428,7 @@ def getStatement( line, filestring):
     #print "line %s" % line
     data_=getLabel(line)
     statement_type_="Label"
-  elif re.findall("  (?P<routine>[a-zA-Z0-9_]+);",line):# or re.findall("Message",line) or re.findall("WaitCond",line):
+  elif re.findall("  (?P<routine>[a-zA-Z0-9_]+)"+semicolon,line):# or re.findall("Message",line) or re.findall("WaitCond",line):
     data_=getCall(line)
     statement_type_="Call"
   else:
@@ -421,7 +436,7 @@ def getStatement( line, filestring):
     data_=None
     #i -= 1
 
-  return statement_type_,data_
+  return [statement_type_,data_,count]
 
 #read in pos
 def getMovementData(line,filestring):
@@ -441,7 +456,7 @@ def getMovementData(line,filestring):
     speed_=[10000,""]
     move_data_ = [targetname, speed_, [], [], 0, 0, ["", ""]]
 
-    print "name: %s" % targetname
+    #print "name: %s" % targetname
   else:
     for lineFindPos in filestring.split('\n'):
       #find position
@@ -483,7 +498,7 @@ def getMovementData(line,filestring):
     speed_=[10000,""]
     move_data_ = [targetname, speed_, [], [], 0, 0, ["", ""]]
 
-    print "name: %s" % targetname
+    #print "name: %s" % targetname
 
   return move_data_
 
@@ -540,7 +555,7 @@ def getSpeed(line):
   speeddef= re.search(r",v(?P<speed>[a-zA-Z0-9_]+)," ,line)
   if speeddef:
     speed = speeddef.group('speed')
-    print "speed: %s" % speed
+    #print "speed: %s" % speed
   else :
     speed='2000'
   if speed == 'max':     return '6000'
@@ -600,7 +615,7 @@ def getCondition(line,cond_all_,char_skip):
     conddef_ = re.search(r"(?P<signs>[\(\)\!\s\,]+)", line[len(cond_all_) + char_skip])
     cond=conddef_.group('signs')
     condition_[0] = cond
-  elif re.search(r"(?P<var_type>[a-zA-Z_]+)"+"_"+"(?P<Nr>[0-9]+)" ,
+  elif re.search(r"(?P<var_type>[a-zA-Z_]+)"+"_"+"(?P<Nr>[0-9]+)"+"_" ,
                  line[len(cond_all_) + char_skip:len(cond_all_) + char_skip + 7]):
     conddef_=re.search(
       r"(?P<var_type>[a-zA-Z]+)"+"_"+"(?P<Nr>[0-9]+)"+"_"+r"(?P<comment>[a-zA-Z0-9_]+)" ,
@@ -632,49 +647,136 @@ def getCondition(line,cond_all_,char_skip):
     cond=logic_[0]
     condition_[0] = cond
 
-    value_def_ = re.search(condition_[0]+r"(?P<eq>[\=\<\>]+)"+r"(?P<value>[a-zA-Z0-9_]+)",line)
+    value_def_ = re.search(condition_[0]+r"(?P<eq>[\=\<\>]+)"+r"(?P<value>[a-zA-Z0-9_]+)",line[len(cond_all_) + char_skip:])
 
     if value_def_:
       condition_[6] = value_def_.group('value')
       condition_[5] = value_def_.group('eq')
       #print "value %s" % condition_[6]
       #print "eq %s" % condition_[5]
-
+  #print "condition_ %s" %condition_
   return condition_
 
-def getIf(line,filestring):
+def getIf(line,filestring,line_cnt_):
 #  cond_def_=re.search("IF (?P<cond>[a-zA-Z0-9_]+)(?P<equal>[\=\!\<\>_]+)(?P<value>[a-zA-Z0-9_]+) THEN",line)
+  global count,skip
   in_then_ = 0
   in_else_ = 0
   sthen=[]
   selse=[]
+  cond_def_ = re.search(" IF " + r'(.*)' + "THEN", line)
+  cond_ = cond_def_.group(0)
+  cnt=0
   #line_nr_=upload.getLineNr(line)
   #print "linr_nr:%s" %line_nr_
+  #skip=0
+
+  #print "line %s" % line
   for line_if_ in filestring.split('\n'):
-    if re.findall("ENDIF", line_if_) and (in_then_ or in_else_):
+    cnt += 1
+    #print "line if %s" % line_if_
+    # if cnt==line_cnt_:
+    #   pass
+      #print "line then %s" % line_if_
+    if not skip == 0:
+      skip = skip - 1
+      print "countiii %s" % (skip)
+      continue
+    elif re.findall("ENDIF", line_if_) and (in_then_ or in_else_):
       if len(selse)==0:
+
         selse.append("")
+      #count+=1
+      print "thenste:%s" % then
+      skip = count - line_cnt_+1
+      print "line end %s" % line_if_
       in_then_=0
       in_else_=0
+
+
       break
-    if line==line_if_:
+    elif cnt==line_cnt_:
+      print "lineooo %s" % line
 
       in_then_=1
+      #count+=1
       continue
-    if in_then_:
-      #print "linethen:%s" % line_if_
-      sthen.append(getStatement(line_if_,filestring))
-    if re.findall("ELSE",line_if_) and in_then_:
 
+    elif in_then_:
+
+      #print "linethen:%s" % line_if_
+      then=getStatement(line_if_,filestring,count,skip)
+      print "line then %s" % line_if_
+      count=then[2]
+      sthen.append(then)
+
+    elif re.findall("ELSE",line_if_) and in_then_:
+      #count += 1
       in_else_=1
       in_then_=0
       continue
-    if in_else_:
-      #print "lineelse:%s" % line_if_
-      selse.append(getStatement(line_if_,filestring))
-  return [sthen,selse]
+    elif in_else_:
 
-def getSelect(line,filestring):
+      print "lineelse:%s" % line_if_
+      else_=getStatement(line_if_,filestring,count,skip)
+      count=else_[2]
+      selse.append(else_)
+  return [cond_,sthen,selse]
+
+def getWhile(line,filestring,line_cnt_):
+    global count,skip
+    in_while = 0
+    #in_else_ = 0
+    s_while_ = []
+    #selse = []
+    cond_def_ = re.search("WHILE " + r'(.*)' +"DO", line)
+    cond_ = cond_def_.group(0)
+    cnt=0
+    #skip=0
+    for line_if_ in filestring.split('\n'):
+      cnt+=1
+      # if cnt==line_cnt_:
+      #   print "line %s" % line_if_
+      if not skip == 0:
+        skip = skip - 1
+
+        continue
+      elif re.findall("ENDWHILE", line_if_) and (in_while):# or in_else_):
+        # if len(selse) == 0:
+        #     selse.append("")
+        in_while = 0
+        skip = count - line_cnt_+1
+        #in_else_ = 0
+        #count += 1
+        #print "linewhile:%s" % line_if_
+        break
+      elif cnt == line_cnt_:
+        print "line %s" %line_if_
+        in_while = 1
+
+        #count+=1
+        continue
+      elif in_while:
+
+
+        #print "linecnt:%s" % line_cnt_
+        while_ = getStatement(line_if_, filestring, count,skip)
+        print "linewhile:%s" % line_if_
+        print "whileste:%s" %while_
+        count = while_[2]
+        s_while_.append(while_)
+        # if re.findall("ELSE", line_if_) and in_then_:
+        #     in_else_ = 1
+        #     in_then_ = 0
+        #     continue
+        # if in_else_:
+        #     # print "lineelse:%s" % line_if_
+        #     selse.append(getStatement(line_if_, filestring))
+    return [cond_,s_while_]
+
+
+def getSelect(line,filestring,line_cnt_):
+  global skip,count
   in_select_=0
   in_else_=0
   #in_case_=1
@@ -682,17 +784,25 @@ def getSelect(line,filestring):
   selse=[]
   case_number=[]
   case_comment_=None
+  cnt=0
   case_state_=[]
   #print " if get called "
+  cond_def_ = re.search(" TEST " + r'(.*)', line)
+  cond_ = cond_def_.group(0)
   for line_select_ in filestring.split('\n'):
 
-
-    if line==line_select_:
+    cnt+=1
+    if cnt==line_cnt_:
       in_select_=1
       #print "line %s" % line_select_
       var_def_=re.search("TEST (?P<var>[a-zA-Z0-9_]+)",line_select_)
       continue
+    elif not skip == 0:
+      skip = skip - 1
+      print "countiii %s" % (skip)
+      continue
     elif re.findall("ENDTEST",line_select_) and in_else_:
+      skip = count - line_cnt_ +1
       break
     elif re.findall("DEFAULT:",line_select_) and in_select_:
       #print "lineelse %s" % line_select_
@@ -704,29 +814,46 @@ def getSelect(line,filestring):
 
     elif re.findall('CASE (?P<nr>[a-zA-Z0-9\:"_]+):',line_select_) and in_select_:
       #in_case_=0
+      #print "case_state_ %s" %case_state_
       if not case_state_==[]:
         cases.append(case_state_)
+      #print "case line %s" %line_select_
       case_state_=[]
       nr_def_=re.search('CASE (?P<nr>[a-zA-Z0-9\:"_]+):',line_select_)
       nr_=nr_def_.group('nr')
       case_number.append("=="+nr_)
       #cases.append(getStatement(line_select_, filestring))
-      case_state_.append(getStatement(line_select_,filestring))
+
+      then = getStatement(line_select_, filestring, count, skip)
+      if then:
+        count = then[2]
+        case_state_.append(then)
+      # else:
+      #   count+=1
       #continue
     elif in_select_:
       #print "line %s" % line_select_
       #cases.append(getStatement(line_select_,filestring))
-      case_state_.append(getStatement(line_select_,filestring))
+      if not case_state_==[]:
+        then = getStatement(line_select_, filestring, count,skip)
+        count = then[2]
+        case_state_.append(then)
       #print "case_state_ %s" % case_state_
-
+      #print "select line %s" % line_select_
       #cases.append(case_state_)
       #in_case_=1
 
     elif in_else_:
       #print "lineelse %s" % line_select_
-      selse.append(getStatement(line_select_,filestring))
 
-  return [cases,case_number,selse]
+      else_=getStatement(line_select_,filestring,count,skip)
+      if else_:
+        count=else_[2]
+        selse.append(else_)
+      #selse.append(getStatement(line_select_,filestring,line_cnt_))
+
+  return [cond_,cases,case_number,selse]
+
 
 def getJump(line):
   JmpLblGroup = re.search("GOTO (?P<JmpLbl>[a-zA-Z0-9\[\]\:_]+)", line)
@@ -751,7 +878,7 @@ def getLabel(line):
 
 def getMessage(line):
   messsag_def_=re.search("TPWrite "+'"(.*)"'+semicolon,line)
-  call_data_=messsag_def_.group(0)
+  call_data_=messsag_def_.group(0)[7:len(messsag_def_.group(0))-2]
   return call_data_
 
 # #get accuracy
@@ -902,19 +1029,21 @@ def getReturn(line):
 
 def getCall(line):
   #print "line:%s" %line
+  call_data_=[]
   messsag_def_=re.search("Message "+'"MessageNo:(?P<Nr>[0-9]+)"'+comma+'"(?P<action>[a-zA-Z0-9_]+)"'+semicolon,line)
   if messsag_def_:
-    call_data_=["Message",messsag_def_.group('Nr'),messsag_def_.group("action")]
+    call_data_=["Message",'MessageNo:'+messsag_def_.group('Nr'),messsag_def_.group("action")]
   elif re.search(
       "WaitCond " + '"WaitNo:(?P<Nr>[0-9]+)"' + semicolon, line):
     wait_cond_def_ = re.search(
       "WaitCond " + '"WaitNo:(?P<Nr>[0-9]+)"'+ semicolon, line)
     if wait_cond_def_:
-      call_data_ = ["WaitCond", wait_cond_def_.group('Nr'),""]
+      call_data_ = ["WaitCond", 'WaitNo:'+wait_cond_def_.group('Nr'),""]
   #return call_data_
   else:
     call_def_=re.search("  (?P<routine>[a-zA-Z0-9_]+);",line)
-    call_data_ = [call_def_.group('routine'), "", ""]
+    if call_def_:
+      call_data_ = [call_def_.group('routine'), "", ""]
   return call_data_
 
 def createCall(routine,line,filestring,robCnt,scope,callDef,program):  
@@ -985,7 +1114,7 @@ def getWait(line):
   variable_nr_=["","","",""]
 
   if re.search("WaitTime", line):
-    time_value_ = re.search("WaitTime (?P<time>[0-9]+);", line)
+    time_value_ = re.search("WaitTime (?P<time>[0-9\.]+);", line)
     #print "wait %s" % wait_data_[2]
     if time_value_:
       value_[0]= time_value_.group('time')
@@ -1007,7 +1136,7 @@ def getWait(line):
 def getSetVariable(line):
   set_var_data_ = ["", ""]
   if not re.findall("PERS",line):
-    var_def_=re.search("(?P<var1>[a-zA-Z0-9\s_]+)"+colon+eq+"(?P<var2>[a-zA-Z0-9\+_\s]+);",line)
+    var_def_=re.search("(?P<var1>[a-zA-Z0-9\s_]+)"+colon+eq+"(?P<var2>[a-zA-Z0-9\+\s_]+)" +semicolon,line)
     if var_def_:
       set_var_data_=[delChars(var_def_.group('var1')),"","",var_def_.group('var2'),"",""]
   return set_var_data_

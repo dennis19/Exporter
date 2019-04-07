@@ -144,6 +144,8 @@ def OnStart():
 
 
 def writeLineABB(line_data_):
+
+  #line= "%4i:  " % state_count_
   line=""
   if line_data_[0]=="Call":
 
@@ -184,7 +186,9 @@ def writeLineABB(line_data_):
     line+=writeReturn(line_data_[1])
   else:
     print "Statement %s not translated" %line_data_[0]
-
+  #line+=";\n"
+  #statement_count_=state_count_
+  #statement_count_+=1
   print "line %s" %line
   return line
 
@@ -273,13 +277,18 @@ def writeTargetDefinition(statement,indentation,line):
   return line
 
 def writeBreak(statement,indentation,line):
-  line+= " "*indentation+"BREAK;\n"
+  line= " "*indentation+"BREAK;\n"
   return line 
   #output_file.write(" "*indentation+"Break;\n")
 
 
-def writeCall(statement,indentation,line):
-  line+= " "*indentation+"%s;\n" % statement.getProperty("Routine").Value.Name
+def writeCall(call_data_):
+  line= " "*4+"%s " % call_data_[0]
+  if not call_data_[1]=="":
+    line+='"%s" ' %call_data_[1]
+    if not call_data_[2] == "":
+      line += ',"%s"' % call_data_[2]
+  line+=";\n"
   return line 
   #output_file.write(" "*indentation+"%s;\n" % statement.getProperty("Routine").Value.Name)
 
@@ -289,6 +298,11 @@ def writeComment(comment_data_):
   return line 
   #output_file.write(" "*indentation+"!%s\n" % (statement.Comment))
 
+def writeLabel(label_data_):
+  return " "*4+str(label_data_[0])+label_data_[1]+ ":\n"
+
+def writeJMP(jump_data_):
+  return " "*4+"GOTO "+str(jump_data_)+" ;\n"
 
 def writeDefineBase(statement,indentation,line):
   name = statement.Base.Name
@@ -317,40 +331,59 @@ def writeDefineTool(statement,indentation,line):
   #output_file.write(" "*indentation+"%s:=[TRUE,[[%g,%g,%g],[%g,%g,%g,%g]],%s];\n" %(name,p.X,p.Y,p.Z,q.X,q.Y,q.Z,q.W,load))
 
 
-def writeDelay(statement,indentation,line):
-  line+=" "*indentation+"WaitTime %g;\n" % (statement.Delay)
+def writeDelay(delay_data_):
+  line=" "*4+"WaitTime %g;\n" % (delay_data_)
   return line 
   #output_file.write(" "*indentation+"WaitTime %g;\n" % (statement.Delay))
 
 
 def writeHalt(statement,indentation):
-  line+=" "*indentation+"Stop;\n"
+  line=" "*indentation+"Stop;\n"
   return line 
   #output_file.write(" "*indentation+"Stop;\n")
 
 
-def writeIf(statement,indentation,line):
-  cnd = statement.Condition.strip()
-  ifcondregex ="(?P<cond>[a-zA-Z0-9_]+)(?P<equal>[^a-zA-Z0-9_]+)(?P<value>[a-zA-Z0-9_]+)"
-  conddef=re.search(ifcondregex,cnd)
-  if conddef.group('equal')== "==":
-    equal = "="
-  cond=conddef.group('cond')+equal+conddef.group('value')
-  line += " "*indentation+"IF %s THEN\n" %(cond)
-  #output_file.write(" "*indentation+"IF %s THEN\n" %(cnd))
-  indentation += 2
-  for s in statement.ThenScope.Statements:
-    line=writestatement[s.Type](s,indentation,line)
-  indentation -= 2
-  line+=" "*indentation+"ELSE\n"
-  #output_file.write(" "*indentation+"ELSE\n")
-  indentation += 2
-  for s in statement.ElseScope.Statements:
-    line=writestatement[s.Type](s,indentation,line)
-  indentation -= 2
-  line+=" "*indentation+"ENDIF\n"
-  return line 
+def writeIf(if_data_):
+  indentation=4
+  line = " "*indentation+"IF "+if_data_[0]+" THEN\n"
+  indentation+=2
+  for data_ in if_data_[1]:
+
+    line+=" "*indentation+writeLineABB(data_)
+  indentation-=2
+  if not if_data_[2]==[]:
+
+    line +=" "*indentation+ "ELSE\n"
+    indentation+=2
+    for data_ in if_data_[2]:
+
+      line+=" "*indentation+writeLineABB(data_)
+    indentation-=2
+  print " indentaion %s" %indentation
+  line+=" "*indentation+"     ENDIF\n"
+  #state_count_ += 1
+  # cnd = statement.Condition.strip()
+  # ifcondregex ="(?P<cond>[a-zA-Z0-9_]+)(?P<equal>[^a-zA-Z0-9_]+)(?P<value>[a-zA-Z0-9_]+)"
+  # conddef=re.search(ifcondregex,cnd)
+  # if conddef.group('equal')== "==":
+  #   equal = "="
+  # cond=conddef.group('cond')+equal+conddef.group('value')
+  # line += " "*indentation+"IF %s THEN\n" %(cond)
+  # #output_file.write(" "*indentation+"IF %s THEN\n" %(cnd))
+  # indentation += 2
+  # for s in statement.ThenScope.Statements:
+  #   line=writestatement[s.Type](s,indentation,line)
+  # indentation -= 2
+  # line+=" "*indentation+"ELSE\n"
+  # #output_file.write(" "*indentation+"ELSE\n")
+  # indentation += 2
+  # for s in statement.ElseScope.Statements:
+  #   line=writestatement[s.Type](s,indentation,line)
+  # indentation -= 2
+  # line+=" "*indentation+"ENDIF\n"
+  # return line
   #output_file.write(" "*indentation+"ENDIF\n")
+  return line
 
 
 def writeLinMotion(statement,indentation,line):
@@ -370,6 +403,8 @@ def writeLinMotion(statement,indentation,line):
   return line 
   #output_file.write(" "*indentation+"MoveL %s,%s,%s,%s\WObj:=%s;\n" % (statement.Positions[0].Name,sp,zone,tn,bn))
 
+def writeMessage(mess_data_):
+  return " "*4+'TPWrite '+mess_data_+'";\n'
 
 def writePtpMotion(statement,indentation,line):
   global motiontarget
@@ -400,6 +435,26 @@ def writeReturn(statement,indentation,line):
   return line 
   #output_file.write(" "*indentation+"RETURN;\n")
 
+def writeSetOutput(set_out_data):
+  # if statement.OutputPort < 1000:
+  #   if not statement.Name=="":
+  #     line = "DO[%i%s]=" % (statement.OutputPort, statement.Name)
+  #   else:
+  #     line = "DO[%i]=" % (statement.OutputPort)
+  # else:
+  #   line = "RO[%i: %s]=" % (statement.OutputPort - 1000, statement.Name)
+  # # endif
+  # if statement.OutputValue:
+  #   line += "ON ;\n"
+  # else:
+  #   line += "OFF ;\n"
+
+  line =" "*4+"SetDO %s,%s;\n" %(set_out_data[1],set_out_data[2])
+  # if not set_out_data[1]=="":
+  #   line+="%s" %set_out_data[1]
+  # line+="=%s"%set_out_data[2]
+
+  return line
 
 def writeSetBin(statement,indentation,line):
   line+=" "*indentation+"SetDO do%i,%i;\n" %(statement.OutputPort,statement.OutputValue)
@@ -413,6 +468,24 @@ def writeSetProperty(statement,indentation,line):
   return line 
   #output_file.write(" "*indentation+"%s := %s;\n" %(statement.TargetProperty,ve))
 
+def writeSetVariable(set_var_data_):
+  line=""
+  if set_var_data_[0]:
+    line=" "*4+set_var_data_[0]
+    if set_var_data_[1]:
+      line+='[%s' %set_var_data_[1]
+      if set_var_data_[2]:
+        line += ':%s' % set_var_data_[2]
+      line+="]"
+    line+="="
+    line+=set_var_data_[3]
+    if set_var_data_[4]:
+      line+='[%s' %set_var_data_[4]
+      if set_var_data_[5]:
+        line += ':%s' % set_var_data_[5]
+      line+="]"
+    line+=";\n"
+  return line
 
 def writeWaitBin(statement,indentation,line):
   line+=" "*indentation+"WaitDI di%i,%i;\n" %(statement.InputPort,statement.InputValue)
@@ -771,6 +844,9 @@ def writeStatement( statement ):
   statementCount += 1
   text += line
   return
+
+
+
 
 def getAllStatementWriters():
   statementhandlers = {

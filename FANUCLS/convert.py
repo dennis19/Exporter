@@ -206,42 +206,45 @@ def convertRoutine(comp,routine):
 
   comp.createProperty(VC_BOOLEAN, "%s::SkipExecution" % rname)
 
-  header = """/PROG  %s
-  /ATTR
-  OWNER           = MNEDITOR;
-  COMMENT         = "%s";
-  PROG_SIZE       = 0;
-  CREATE          = %s;
-  MODIFIED        = %s;
-  FILE_NAME       = ;
-  VERSION         = 0;
-  LINE_COUNT      = 0;
-  MEMORY_SIZE     = 0;
-  PROTECT         = READ_WRITE;
-  TCD:  STACK_SIZE        = 0,
-        TASK_PRIORITY     = 50,
-        TIME_SLICE        = 0,
-        BUSY_LAMP_OFF     = 0,
-        ABORT_REQUEST     = 0,
-        PAUSE_REQUEST     = 0;
-  DEFAULT_GROUP   = 1,*,*,*,*;
-  CONTROL_CODE    = 00000000 00000000;
-  /APPL
-  /MN
-  """
+
   td = time.strftime("DATE %y-%m-%d  TIME %H:%M:%S")
-  text = header % (rname, rname, td, td)
-  #print "name %s" %rob_cnt_.Name
+    #print "name %s" %rob_cnt_.Name
   if rob_cnt_.Name=="IRC5":
     producer_="ABB"
+    header="MODULE %s\n" %rname
+    pos_ = """ENDMODULE\n"""
     #head_ = 'MODULE'
     #filter_="*.mod"
     #upload_programs(program_,infile,filename_)
   elif rob_cnt_.Name=="R30iA":
     producer_ = "FANUC"
+    header = """/PROG  %s
+    /ATTR
+    OWNER           = MNEDITOR;
+    COMMENT         = "%s";
+    PROG_SIZE       = 0;
+    CREATE          = %s;
+    MODIFIED        = %s;
+    FILE_NAME       = ;
+    VERSION         = 0;
+    LINE_COUNT      = 0;
+    MEMORY_SIZE     = 0;
+    PROTECT         = READ_WRITE;
+    TCD:  STACK_SIZE        = 0,
+          TASK_PRIORITY     = 50,
+          TIME_SLICE        = 0,
+          BUSY_LAMP_OFF     = 0,
+          ABORT_REQUEST     = 0,
+          PAUSE_REQUEST     = 0;
+    DEFAULT_GROUP   = 1,*,*,*,*;
+    CONTROL_CODE    = 00000000 00000000;
+    /APPL
+    /MN
+    """ % (rname, rname, td, td)
+    pos_ = """/POS\n"""
     #head_ = '/PROG'
     #filter_ = "*.ls"
-
+  text = header #
 
   mainroutine = comp.getProperty('MainRoutine')
   if mainroutine:
@@ -258,11 +261,11 @@ def convertRoutine(comp,routine):
   statementCount = 1
   ##for statement in getAllStatements(routine):
   for statement in routine.Statements:
-    text+= "%4i:  " % statementCount
+    #text+= "%4i:  " % statementCount
     line_data_=IntermediateConvert.getStatementData(statement)
-    text+= writeLine(line_data_,producer_)+";\n"
+    text+= writeLine(line_data_,producer_)#+";\n"
   # endfor
-  pos_ = """/POS\n"""
+
   text += pos_
   # positions = []
   # for s in routine.Statements:
@@ -287,14 +290,16 @@ def writeLine(line_data_,producer_):
   global text, statementCount, uframe_num, utool_num, label
   if producer_=="ABB":
     line=IntermediateConvertABB.writeLineABB(line_data_)
-  elif producer_=="FANUC":
-    line =writeLineFanuc(line_data_)
 
-  statementCount += 1
+  elif producer_=="FANUC":
+    line = "%4i:  " % statementCount
+    line+=writeLineFanuc(line_data_)+";\n"
+
   return line
 
 def writeLineFanuc( line_data_ ):
   global text, statementCount, uframe_num, utool_num, label
+  statementCount += 1
   line=""
   # if line_data_=="":
   #   pass
@@ -453,6 +458,11 @@ def writeSetOutput(set_out_data):
   # else:
   #   line += "OFF ;\n"
 
+  if set_out_data[2] == 1:
+    set_out_data[2] = "ON"
+  elif set_out_data[2] == 0:
+    set_out_data[2] = "OFF"
+
   line = "DO[%i" %set_out_data[0]
   if not set_out_data[1]=="":
     line+="%s" %set_out_data[1]
@@ -533,6 +543,7 @@ def writeWAIT(wait_data_):
   return line
 
 def writeSetVariable(set_var_data_):
+
   line=set_var_data_[0]
   if set_var_data_[1]:
     line+='[%s' %set_var_data_[1]
@@ -594,14 +605,15 @@ def writeSetVariable(set_var_data_):
 def writeIf(if_data_):
   global label,statementCount
   #text_part_=""
-  line=""
+  #line=""
   #thenlabel = label
   #label += 1
   #elselabel = label
   #label += 1
   #condition_=if_data_[0]
   #print "line_data_ %s" %if_data_[1]
-  line += "IF %s," % (if_data_[0])
+  if_data_[0]=transformCondition(if_data_[0])
+  line = "IF %s," % (if_data_[0])
   for data_ in if_data_[1]:
     line+=writeLineFanuc(data_)
 
@@ -695,25 +707,27 @@ def writeMotion(motion_data_):
   if re.search("(?P<Nr>[0-9_]+)",motion_data_[0]):
     uf_def_=re.search("(?P<Nr>[0-9_]+)",motion_data_[0])
     motion_data_[0]=uf_def_.group('Nr')
-    print "motion %s" % motion_data_[0]
+    #print "motion %s" % motion_data_[0]
   if re.search("(?P<Nr>[0-9_]+)",motion_data_[1]):
     ut_def_=re.search("(?P<Nr>[0-9_]+)",motion_data_[1])
     motion_data_[1]=ut_def_.group('Nr')
-
+  #print "statement count %s" % statementCount
   # uf = download.GetBaseIndex(statement, controller)
   if uframe_num != motion_data_[0]:
     uframe_num = motion_data_[0]
     line += "UFRAME_NUM = %s ;\n" % (motion_data_[0])
-    statementCount += 1
-    line += "%4i:  " % statementCount
-    # endif
 
+    line += "%4i:  " % statementCount
+    statementCount += 1
+    # endif
+  #print "line %s" %line
   # ut = download.GetToolIndex(statement, controller)
   if utool_num != motion_data_[1]:
     utool_num = motion_data_[1]
     line += "UTOOL_NUM = %s ;\n" % (motion_data_[1])
-    statementCount += 1
+
     line += "%4i:  " % statementCount
+    statementCount += 1
     # endif
 
   # zone = 'FINE'
@@ -808,15 +822,15 @@ def writeReturn(return_data_):
 def writeMessage(mess_data_):
   return "MESSAGE["+mess_data_+"] "
 
-def transformCondition(statement):
+def transformCondition(data_):
   i=0
   transformed_condition_=""
 
-  while i<len(statement.Condition):
+  while i<len(data_):
     #transformed_condition_+=statement.Condition[i]
     #print "cond %s" % statement.Condition[i]
-    if re.findall(r"(?P<signs>[\!\=\&\|]+)",statement.Condition[i]):
-      sign_def = re.search(r"(?P<signs>[\!\=\&\|]+)",statement.Condition[i:i+2])
+    if re.findall(r"(?P<signs>[\!\=\&\|]+)",data_[i]):
+      sign_def = re.search(r"(?P<signs>[\!\=\&\|]+)",data_[i:i+2])
       sign_ = sign_def.group("signs")
       i = i + len(sign_)
       if sign_=="==":
@@ -828,19 +842,19 @@ def transformCondition(statement):
       elif sign_=="||":
         sign_="OR"
       transformed_condition_ += sign_
-    elif re.findall("Parameter_"+"(?P<Nr>[0-9_]+)", statement.Condition[i:i+11]):
-      type_def_=re.search("Parameter_"+"(?P<Nr>[0-9_]+)", statement.Condition[i:i+11])
+    elif re.findall("Parameter_"+"(?P<Nr>[0-9_]+)", data_[i:i+11]):
+      type_def_=re.search("Parameter_"+"(?P<Nr>[0-9_]+)", data_[i:i+11])
       type_="AR["+type_def_.group('Nr')+"]"
       transformed_condition_+=type_
       i+=len("Parameter_"+type_def_.group('Nr'))
-    elif re.findall(r"(?P<var_type>[a-zA-Z]+)",statement.Condition[i]):
-      type_def_=re.search(r"(?P<var_type>[a-zA-Z]+)"+obracket+"(?P<Nr>[0-9_]+)"+cbracket,statement.Condition[i:i+9])
+    elif re.findall(r"(?P<var_type>[a-zA-Z]+)",data_[i]):
+      type_def_=re.search(r"(?P<var_type>[a-zA-Z]+)"+obracket+"(?P<Nr>[0-9_]+)"+cbracket,data_[i:i+9])
 
       if type_def_:
         value_=""
         sign_=""
         equal_=0
-        equal_def_=re.search(r"(?P<signs>[\=\!]+)"+"(?P<value>[0-9_]+)",statement.Condition[i:i+11])
+        equal_def_=re.search(r"(?P<signs>[\=\!]+)"+"(?P<value>[0-9_]+)",data_[i:i+11])
 
         type_ = type_def_.group("var_type")
         #print "nr :%s" %type_def_.group("value")
@@ -874,10 +888,10 @@ def transformCondition(statement):
           transformed_condition_ += type_
           i=i+len(type_)
 
-      elif re.search(r"(?P<regType>[a-zA-Z]+)"+"::",statement.Condition[i:i+12]):
+      elif re.search(r"(?P<regType>[a-zA-Z]+)"+"::",data_[i:i+12]):
         type_def_=re.search(
           r"(?P<regType>[a-zA-Z]+)" + "::" + r"(?P<var_type>[a-zA-Z]+)" + "(?P<Nr>[0-9_]+)" + r"(?P<comment>[a-zA-Z0-9\._]+)",
-          statement.Condition[i:])
+          data_[i:])
         reg_type=type_def_.group("regType")
         type_ = type_def_.group("var_type")
         index_=type_def_.group("Nr")
@@ -893,13 +907,13 @@ def transformCondition(statement):
 
       else:
         #print "char:%s" %statement.Condition[i]
-        transformed_condition_ += statement.Condition[i]
+        transformed_condition_ += data_[i]
         i=i+1
 
 
 
     else:
-      transformed_condition_ += statement.Condition[i]
+      transformed_condition_ += data_[i]
       i=i+1
 
 
