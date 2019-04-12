@@ -78,9 +78,9 @@ def OnAbort():
 def OnStop():
   cleanUp()
 
-def uploadvarABB_(program, filestring):
-  # filestring = infile.read()
-  # infile.close()
+def uploadvarABB_(program, infile):
+  filestring = infile.read()
+  infile.close()
 
   executor = program.Executor
   comp = executor.Component
@@ -88,9 +88,7 @@ def uploadvarABB_(program, filestring):
   tool_data_=[]
   pos_data_ = []
   var_data_ = []
-  blocks = {}
-  lineBuffer = ''
-  currentSection = ''
+
   for line in filestring.split('\n'):
     if re.findall("tooldata",line) and not re.findall("LOCAL", line):
       tool_data_.append(getToolFrames(line))

@@ -384,9 +384,10 @@ def readPos(s,robCnt,type,program,move_data_):
 
       s.JointSpeed = float(move_data_[1][0])/(100)
     else:
-      if comp_.getProperty("R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])):
+      if comp_.getProperty("Registers::R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])):
         s.JointSpeed = int(comp_.getProperty("R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])).Value) / 100
-
+        s.createProperty(VC_STRING,"SpeedRegister")
+        s.getProperty("SpeedRegister").Value=str(comp_.getProperty("Registers::R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])).Name)[11:]
   elif type=="lin":
 
     if move_data_[1][1]=="":
@@ -395,26 +396,49 @@ def readPos(s,robCnt,type,program,move_data_):
 
       if comp_.getProperty("Registers::R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])):
         s.MaxSpeed = int(comp_.getProperty("Registers::R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])).Value)
+        s.createProperty(VC_STRING,"SpeedRegister")
+        s.getProperty("SpeedRegister").Value=str(comp_.getProperty("Registers::R" + move_data_[1][0] + uploadva.delChars(move_data_[1][1])).Name)[11:]
   if not move_data_[7][1]=="":
     if comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])):
       s.AccuracyValue = int(comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])).Value)
+      s.createProperty(VC_STRING, "AccuracyRegister")
+      s.getProperty("AccuracyRegister").Value = str(comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])).Name)[11:]
   else:
     if not move_data_[7][0]=='fine':
       s.AccuracyValue=int(move_data_[7][0])
     else:
       s.AccuracyValue=0
 
-  m = vcMatrix.new()
-  m.translateAbs(move_data_[2][0], move_data_[2][1], move_data_[2][2])
-  m.setWPR( move_data_[2][3],  move_data_[2][4],  move_data_[2][5])
+  if not move_data_[2]==[0,0,0,0,0,0]:
+    m = vcMatrix.new()
+    m.translateAbs(move_data_[2][0], move_data_[2][1], move_data_[2][2])
+    m.setWPR( move_data_[2][3],  move_data_[2][4],  move_data_[2][5])
+
+    posFrame = s.Positions[0]
+    posFrame.PositionInReference = m
+
+  elif not move_data_[8]==["","","","","",""]:
+    joints = [move_data_[8][0], move_data_[8][1], move_data_[8][2], move_data_[8][3], move_data_[8][4], move_data_[8][5]]
+
+    # read in jointvalues
+    posFrame = s.Positions[0]
+    mt = robCnt.createTarget()
+    mt.MotionType = VC_MOTIONTARGET_MT_JOINT
+    mt.UseJoints = True
+
+    jv = mt.JointValues
+    for i in xrange(len(jv)):
+      jv[i] = joints[i]
+    mt.JointValues = jv
+    print "jointvalues %s" %jv
+    # convert into cartesian
+    posFrame.PositionInReference = mt.Target
 
 
+    posFrame.Name = move_data_[0]
+    if robCnt=="R30iA":
+      posFrame.Configuration = move_data_[3]
 
-  posFrame = s.Positions[0]
-  posFrame.PositionInReference = m
-  posFrame.Name = move_data_[0]
-  if robCnt=="R30iA":
-    posFrame.Configuration = move_data_[3]
 
   #endif
 
@@ -487,13 +511,26 @@ def createToolOffset(program,routine_,scope_,move_data_):
 
   s = addStatement(scope_, routine_, 'Process')
 
+
+
   s.createProperty(VC_STRING, "Position")
   s.createProperty(VC_STRING, "Register")
   s.createProperty(VC_STRING, "Speed")
-
+  s.createProperty(VC_STRING, "AccuracyValue")
   s.getProperty('Position').Value = move_data_[6][1]
   s.getProperty('Register').Value = move_data_[6][0]
   s.getProperty('Speed').Value = str(move_data_[1][0])
+  print "move data %s" %move_data_[7]
+  if not move_data_[7][1]=="":
+    if comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])):
+      s.getProperty("AccuracyValue").Value = str(comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])).Value)
+      s.createProperty(VC_STRING, "AccuracyRegister")
+      s.getProperty("AccuracyRegister").Value = str(comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])).Name)[11:]
+  else:
+    if not move_data_[7][0]=='fine':
+      s.getProperty("AccuracyValue").Value=str(move_data_[7][0])
+    else:
+      s.getProperty("AccuracyValue").Value="0"
 
   ph_ = comp_.createBehaviour('rPythonProcessHandler', 'ToolOffset')
   pos=s.createPosition(move_data_[6][1])
@@ -597,13 +634,106 @@ def createLinear(robCnt,routine,scope,program,move_data_):
   else:
     if program.findRoutine("POSREG_"+move_data_[0]):#re.search("PR" + obracket, move_data_[0]):
       callRoutine = program.findRoutine("POSREG_"+move_data_[0] )
-      s = addStatement(scope, routine, VC_STATEMENT_CALL)
-      s.Routine = callRoutine
+      s =createLinPosReg(program,routine,scope,move_data_)
+      #addStatement(scope, routine, VC_STATEMENT_CALL)
+      #s.Routine = callRoutine
     else:
       s = addStatement(scope, routine, VC_STATEMENT_LINMOTION)
       readPos(s,robCnt,"lin",program,move_data_)
   return s
-  
+
+def createLinPosReg(program,routine_,scope_,move_data_):
+  global glob_tool_,glob_frame_
+  exec_ = program.Executor
+  rob_cnt_ = exec_.Controller
+  kin_ = rob_cnt_.Kinematics
+  comp_ = kin_.Component
+  # callRoutine = program.findRoutine("POSREG_"+move_data_[6][0] )
+  #
+  # if callRoutine:
+  #
+  #   offset_vec_vc_=vcMatrix.new()
+  #   offset_statement_=callRoutine.Statements[0]
+  #   offset_vec_=offset_statement_.Positions[0].PositionInReference.P
+  #   offset_vec_vc_.translateAbs(-offset_vec_.Z,-offset_vec_.X,offset_vec_.Y)
+  #   offset_vec_vc_.WPR=offset_statement_.Positions[0].PositionInReference.WPR
+  #
+  callRoutine = program.findRoutine(
+    "POSREG_" + move_data_[0])
+
+  if callRoutine:
+    pos_statement_ = callRoutine.Statements[0]
+    pos_=vcMatrix.new()
+    pos_vec_ = pos_statement_.Positions[0].PositionInReference.P
+    pos_wpr_ = pos_statement_.Positions[0].PositionInReference.WPR
+    pos_.translateAbs(pos_vec_.X,pos_vec_.Y,pos_vec_.Z)
+    pos_.WPR=pos_wpr_
+    # pos_.translateRel(offset_vec_.X,offset_vec_.Y,offset_vec_.Z)
+    base=pos_statement_.Base
+
+  else :
+    pos_statement_ = move_data_[3]
+    pos_=vcMatrix.new()
+    pos_.translateRel(move_data_[2][0], move_data_[2][1], move_data_[2][2])
+    pos_.setWPR(move_data_[2][3], move_data_[2][4], move_data_[2][5])
+    if move_data_[4] == 0:
+      base = rob_cnt_.Bases[0]
+    else:
+      base = rob_cnt_.Bases[move_data_[4] - 1]
+
+  #pos_.translateRel(offset_vec_.X,offset_vec_.Y,offset_vec_.Z)
+
+
+
+  s = addStatement(scope_, routine_, 'Process')
+
+
+
+  s.createProperty(VC_STRING, "Position")
+  #s.createProperty(VC_STRING, "Register")
+  s.createProperty(VC_STRING, "Speed")
+  s.createProperty(VC_STRING, "AccuracyValue")
+  s.getProperty('Position').Value = move_data_[0]
+  #s.getProperty('Register').Value = move_data_[6][0]
+  s.getProperty('Speed').Value = str(move_data_[1][0])
+  print "move data %s" %move_data_[7]
+  if not move_data_[7][1]=="":
+    if comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])):
+      s.getProperty("AccuracyValue").Value = str(comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])).Value)
+      s.createProperty(VC_STRING, "AccuracyRegister")
+      s.getProperty("AccuracyRegister").Value = str(comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])).Name)[11:]
+  else:
+    if not move_data_[7][0]=='fine':
+      s.getProperty("AccuracyValue").Value=str(move_data_[7][0])
+    else:
+      s.getProperty("AccuracyValue").Value="0"
+
+  ph_ = comp_.createBehaviour('rPythonProcessHandler', 'LinearPosReg')
+  pos=s.createPosition(move_data_[0])
+
+  ph_.Script = TOOL_OFFSET_SCRIPT()
+  s.Process = ph_
+  s.Name = 'LinearPosReg'
+  if not glob_tool_ == "":
+    if glob_tool_=="0":
+      s.Tool=rob_cnt_.Tools[0]
+    else:
+      s.Tool = rob_cnt_.Tools[int(glob_tool_) - 1].Name
+  else:
+    s.Tool = pos_statement_.Tool
+
+  if not glob_frame_ == "":
+    if glob_frame_=="0":
+      s.Base=rob_cnt_.Bases[0]
+    else:
+      s.Base = rob_cnt_.Bases[int(glob_frame_) - 1].Name
+  else:
+    s.Base = base
+
+  pos.PositionInReference = pos_
+  return s
+
+
 def createSetDO(routine,scope,set_data):
 
   s = addStatement(scope, routine, VC_STATEMENT_SETBIN)

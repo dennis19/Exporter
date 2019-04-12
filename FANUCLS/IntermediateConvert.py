@@ -325,6 +325,9 @@ def getStatementData( statement ):
     elif re.findall("JMP",statement.Name):
       line_data_[0]="Jump"
       line_data_[1] = getJMP(statement)
+    elif re.findall("LinearPosReg",statement.Name):
+      line_data_[0]="Movement"
+      line_data_[1]=getMotion(statement)
   elif statement.Type==VC_STATEMENT_RETURN:
     line_data_[0]="Return"
     line_data_[1]=getReturn(statement)
@@ -753,9 +756,32 @@ def getMotion(statement):
     #line += "%4i:  " % statementCount
     # endif
 
-  zone = s.AccuracyValue
-  if zone==0:
-    zone='FINE'
+
+  if statement.getProperty("AccuracyRegister"):
+    zone=statement.getProperty("AccuracyRegister").Value
+    zone_def_=re.search("R"+"(?P<Nr>[0-9_]+)",zone)
+    zone="CNT R["+zone_def_.group('Nr')+":"+zone[1+len(zone_def_.group('Nr')):]+"]"
+
+  elif statement.AccuracyValue:
+    zone = statement.AccuracyValue
+    if zone == "0":
+      zone = 'FINE'
+    else:
+      zone = "CNT"+str(int(zone))
+  else:
+    zone="FINE"
+
+  if statement.getProperty("SpeedRegister"):
+    speed_=statement.getProperty("SpeedRegister").Value
+    speed_def_=re.search("R"+"(?P<Nr>[0-9_]+)",speed_)
+    speed_="R["+speed_def_.group('Nr')+":"+speed_[1+len(speed_def_.group('Nr')):]+"]"
+  else:
+    if statement.Type == VC_STATEMENT_LINMOTION:
+      speed_=int(statement.MaxSpeed)
+    elif statement.Type == VC_STATEMENT_PTPMOTION:
+      speed_=int(statement.JointSpeed)
+    else:
+      speed_=statement.getProperty('Speed').Value
   pName = statement.Positions[0].Name
   #print "name:%s" %pName
   if pName[:2] == 'PR':
@@ -781,19 +807,21 @@ def getMotion(statement):
 
   if statement.Type == VC_STATEMENT_LINMOTION:
     # print "pos %s" %statement.Positions[0].PositionInWorld.P.X
-    motion_data_=[uf,ut,"lin",posType,pointIndex,pName, statement.MaxSpeed, zone,""]
+    motion_data_=[uf,ut,"lin",posType,pointIndex,pName, speed_, zone,"",""]
     #line += "L %s[%i%s]  %gmm/sec %s" % (posType, pointIndex, pName, statement.MaxSpeed, zone)
   elif statement.Type == VC_STATEMENT_PTPMOTION:
-    motion_data_ = [uf, ut, "joint", posType, pointIndex, pName, statement.JointSpeed, zone,""]
+    motion_data_ = [uf, ut, "joint", posType, pointIndex, pName, speed_, zone,"",""]
     #line += "J %s[%i%s]  %g%% %s" % (posType, pointIndex, pName, statement.JointSpeed * 100, zone)
   else:
-    motion_data_ = [uf, ut, "lin", posType, pointIndex, pName, int(statement.getProperty('Speed').Value), zone, ""]
+    motion_data_ = [uf, ut, "lin", posType, pointIndex, pName, speed_, zone, "",""]
     # print "pos %s" %statement.Positions[0].PositionInWorld.P.X
     #line += "L %s[%i%s]  %gmm/sec %s" % (posType, pointIndex, pName, int(statement.getProperty('Speed').Value), zone)
   # endif
 
   if statement.getProperty('Position'):
-    motion_data_[8]=statement.getProperty('Register').Value
+    motion_data_[8]=statement.getProperty('Position').Value
+  if statement.getProperty('Register'):
+    motion_data_[9]=statement.getProperty('Register').Value
     #line+=" ToolOffset,%s" %statement.getProperty('Register').Value
 
   #line+=" ;\n"

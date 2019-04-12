@@ -792,20 +792,32 @@ def writeMotion(motion_data_):
       motion_data_[5]=match_.group('comment')
   elif re.findall("P(?P<Nr>[0-9]+)", motion_data_[5]):
     motion_data_[5] = ""
+  elif not motion_data_[8]=="":
+    motion_data_[3]= motion_data_[8][0:2]
+    motion_data_[5]=motion_data_[8]
+    if re.findall(obracket + "(?P<Nr>[0-9_]+)" + '(?P<comment>(\s*:.*)?)' + cbracket, motion_data_[5]):
+      match_ = re.search(obracket + "(?P<Nr>[0-9_]+)" + '(?P<comment>(\s*:.*)?)' + cbracket, motion_data_[5])
+      if not match_.group('comment') == "":
+        if match_.group('comment').split(":"):
+          motion_data_[5] = ":" + match_.group('comment').split(":")[1]
+          # print "name:%s" % pName
+      else:
+        motion_data_[5] = match_.group('comment')
+    motion_data_[4]=motion_data_[8][3:len(motion_data_[8])-len(motion_data_[5])-1]
   else:
-    motion_data_[5]=":"+pName
+    motion_data_[5]=":"+motion_data_[5]
 
   if motion_data_[2] == "joint":
-    line += "J %s[%s%s]  %g%%"%(motion_data_[3], motion_data_[4], motion_data_[5],100*motion_data_[6])
+    line += "J %s[%s%s] %s%%"%(motion_data_[3], motion_data_[4], motion_data_[5],str(100*motion_data_[6]))
   else:
     # print "pos %s" %statement.Positions[0].PositionInWorld.P.X
-    line += "L %s[%s%s]  %gmm/sec" %(motion_data_[3], motion_data_[4], motion_data_[5], motion_data_[6])
+    line += "L %s[%s%s] %smm/sec" %(motion_data_[3], motion_data_[4], motion_data_[5], motion_data_[6])
   # endif
 
   line+=" %s" % (motion_data_[7])
 
-  if not motion_data_[8]=="":
-    line+=" ToolOffset,%s" %motion_data_[8]
+  if not motion_data_[9]=="":
+    line+=" Tool_Offset,%s" %motion_data_[9]
 
   #line+=" ;\n"
   return line

@@ -169,6 +169,7 @@ def getStatement(line,filestring):
 
 #read in JointMovement Data
 def getMovementData(line_,filestring_,type_):
+  joints=[0,0,0,0,0,0]
   idx=0
   idy=0
   idz=0
@@ -181,10 +182,11 @@ def getMovementData(line_,filestring_,type_):
   skip = 1
   point_=""
   speed_=0
-  acc_=0
+  acc_=["",""]
   offset_data_=["",""]
   posname = re.search(pnum_,line_)
   #read in speed and coordinates
+
   if posname:
     point_="P["+posname.group('pnum')+"]"
 
@@ -198,6 +200,7 @@ def getMovementData(line_,filestring_,type_):
              continue
           else:
             skip=0
+
           if re.findall("};",lineFindCoord):
             skip=1
             break
@@ -213,6 +216,19 @@ def getMovementData(line_,filestring_,type_):
             idr=getCoordinates(r,'r',lineFindCoord)
           if idw==0:
             idw=getCoordinates(w,'w',lineFindCoord)
+          if joints[0]==0:
+            joints[0]=getCoordinates(j1,'j1',lineFindCoord)
+            print "joints [00 %s" %joints[0]
+          if joints[1] == 0:
+            joints[1] = getCoordinates(j2, 'j2', lineFindCoord)
+          if joints[2] == 0:
+            joints[2] = getCoordinates(j3, 'j3', lineFindCoord)
+          if joints[3] == 0:
+            joints[3] = getCoordinates(j4, 'j4', lineFindCoord)
+          if joints[4] == 0:
+            joints[4] = getCoordinates(j5, 'j5', lineFindCoord)
+          if joints[5] == 0:
+            joints[5] = getCoordinates(j6, 'j6', lineFindCoord)
           if cfgData=="":
             cfgData=getConfiguration(lineFindCoord)
 
@@ -224,13 +240,14 @@ def getMovementData(line_,filestring_,type_):
     posr_name_=re.search(prnum,line_)
     point_="PR["+posr_name_.group('pnum') + posr_name_.group('comment')+"]"
     speed_=getSpeed(line_,type_)
+    acc_ = getAccuracy(line_)
   # get Tooloffset
   if re.findall("Tool_Offset,PR",line_):
     offset_data_=getToolOffset(line_)
 
 
   coordinates_=[idx,idy,idz,idw,idp,idr]
-  moveData=[point_,speed_,coordinates_,cfgData,base,tool,offset_data_,acc_]
+  moveData=[point_,speed_,coordinates_,cfgData,base,tool,offset_data_,acc_,joints]
   return moveData
 
 def getToolOffset(line):
@@ -299,10 +316,19 @@ def getCoordinates(matchString,matchVar,line):
   matched=re.search(matchString,line)
   idmatched=0
   if matched:
-
+    print "matched %s" %line
     idmatched = float(matched.group(matchVar))
   return idmatched
 
+
+def getJoint(matchString,matchVar,line):
+
+  matched=re.search(matchString,line)
+  idmatched=0
+  if matched:
+    print "matched %s" %line
+    idmatched = float(matched.group(matchVar))
+  return idmatched
 
 def getTool(line):
   toolMatch = re.search(ut, line)
@@ -392,7 +418,8 @@ def getSetDO(line):
   return set_data
 
 def getComment(line):
-  commentString = re.search("!(?P<comment>[a-zA-Z0-9_\-\s\:\/\=\>\[\]\.\,\(\)\!]+)", line)
+  #print "line %s" %line
+  commentString = re.search("!(?P<comment>[a-zA-Z0-9_\-\s\:\/\=\>\[\]\.\,\(\)\!\*]+)", line)
   comment_=commentString.group('comment')
   return comment_
 
