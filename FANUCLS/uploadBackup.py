@@ -44,9 +44,11 @@ def OnStart():
 
   rob_cnt_ = executor_.Controller
   if (rob_cnt_.Name=="IRC5"):
-    readABBVar(program_)
-  #read in summary.dg
+    file_=readABBVar(program_)
+    uploadva.uploadGlobalData(program_,file_[0],rob_cnt_.Name)
+    file_ = readABBVar(program_)
   else:
+    # read in summary.dg
     opencmd_ = app_.findCommand("dialogOpen")
     uri_ = ""
     file_filter_ = "FANUC Robot Program files (*.dg)|summary.dg"
@@ -69,35 +71,40 @@ def OnStart():
     posreg_file_ = glob.glob(filename_[0:len(filename_) - file_length_] + "POSREG.va")
     try:
       infile_pos_reg_ = open(posreg_file_[0], "r")
-      uploadva.uploadva_(program_, infile_pos_reg_)
+      uploadva.uploadGlobalData(program_, infile_pos_reg_,rob_cnt_.Name)
     except:
       print "Cannot open file \'%s\' for reading" % posreg_file_
       return
     # endtry
 
-    posnum_file_ = glob.glob(filename_[0:len(filename_) - file_length_] + "NUMREG.va")
-    try:
-      infile_num_reg_ = open(posnum_file_[0], "r")
-      uploadva.uploadva_(program_, infile_num_reg_)
-    except:
-      print "Cannot open file \'%s\' for reading" % posreg_file_
-      return
+    numreg_file_ = glob.glob(filename_[0:len(filename_) - file_length_] + "NUMREG.va")
+    #try:
+    infile_num_reg_ = open(numreg_file_[0], "r")
+    uploadva.uploadGlobalData(program_, infile_num_reg_,rob_cnt_.Name)
+    #except:
+    #  print "Cannot open file \'%s\' for reading" % numreg_file_
+    #  return
     # endtry
 
     posframe_file_ = glob.glob(filename_[0:len(filename_) - file_length_] + "SYSFRAME.va")
     try:
       infile_pos_frame_ = open(posframe_file_[0], "r")
-      uploadva.uploadva_(program_, infile_pos_frame_)
+      uploadva.uploadGlobalData(program_,infile_pos_frame_,rob_cnt_.Name)
     except:
       print "Cannot open file \'%s\' for reading" % posframe_file_
       return
     # endtry
 
     main_file_ = glob.glob(filename_[0:len(filename_) - file_length_] + "PNS0001.ls")
+    if main_file_==[]:
+      main_file_ = glob.glob(filename_[0:len(filename_) - file_length_] + "MAIN.ls")
     print "%s" %main_file_
+
     #try:
     infile_main_ = open(main_file_[0], "r")
-    upload.upload_programs(program_, infile_main_,filename_)
+    file_=[infile_main_,filename_]
+
+  upload.upload_programs(program_, file_[0],file_[1])
   #except:
   #print "Cannot open file \'%s\' for reading" % main_file_
   #  return
@@ -120,11 +127,12 @@ def readABBVar(program_):
   file_length_=len(os.path.basename(filename_))
   try:
     infile_sum_ = open(filename_, "r")
-    uploadvarABB.uploadvarABB_(program_,infile_sum_)
+    #uploadvarABB.uploadvarABB_(program_,infile_sum_)
     #uploadsum.uploadsum_(program_, infile_sum_)
   except:
     print "Cannot open file \'%s\' for reading" % filename_
-    return
+
+  return [infile_sum_,filename_]
 
 #-------------------------------------------------------------------------------
 

@@ -454,7 +454,7 @@ def getMovementData(line,filestring):
   if re.findall("HOME",targetname) or re.findall("PrePos",targetname):
     #targetname=targetname
     speed_=[10000,""]
-    move_data_ = [targetname, speed_, [], [], 0, 0, ["", ""]]
+    move_data_ = [targetname, speed_, [], [], 0, 0, ["", ""],["fine",""],"", ["", ""]]
 
     #print "name: %s" % targetname
   else:
@@ -479,7 +479,7 @@ def getMovementData(line,filestring):
           tool_=getTool(line)
           base_ =getBase(line)
           speed_=getSpeed(line)
-          move_data_=[targetname,speed_,coordinates_,config_data_,base_,tool_,["",""]]
+          move_data_=[targetname,speed_,coordinates_,config_data_,base_,tool_,["",""],["fine",""],"", ["", ""]]
         #print "orientation %s" %m.WPR.X
           #t = robCnt.createTarget(m)
           # if s.Type==VC_STATEMENT_PTPMOTION:
@@ -496,7 +496,7 @@ def getMovementData(line,filestring):
           # posFrame.PositionInReference=m
   if move_data_==[]:
     speed_=[10000,""]
-    move_data_ = [targetname, speed_, [], [], 0, 0, ["", ""]]
+    move_data_ = [targetname, speed_, [], [], 0, 0, ["", ""],["fine",""],"", ["", ""]]
 
     #print "name: %s" % targetname
 
@@ -680,23 +680,23 @@ def getIf(line,filestring,line_cnt_):
       #print "line then %s" % line_if_
     if not skip == 0:
       skip = skip - 1
-      print "countiii %s" % (skip)
+      #print "countiii %s" % (skip)
       continue
     elif re.findall("ENDIF", line_if_) and (in_then_ or in_else_):
       if len(selse)==0:
 
         selse.append("")
       #count+=1
-      print "thenste:%s" % then
+      #print "thenste:%s" % then
       skip = count - line_cnt_+1
-      print "line end %s" % line_if_
+      #print "line end %s" % line_if_
       in_then_=0
       in_else_=0
 
 
       break
     elif cnt==line_cnt_:
-      print "lineooo %s" % line
+     # print "lineooo %s" % line
 
       in_then_=1
       #count+=1
@@ -706,7 +706,7 @@ def getIf(line,filestring,line_cnt_):
 
       #print "linethen:%s" % line_if_
       then=getStatement(line_if_,filestring,count,skip)
-      print "line then %s" % line_if_
+      #print "line then %s" % line_if_
       count=then[2]
       sthen.append(then)
 
@@ -717,7 +717,7 @@ def getIf(line,filestring,line_cnt_):
       continue
     elif in_else_:
 
-      print "lineelse:%s" % line_if_
+      #print "lineelse:%s" % line_if_
       else_=getStatement(line_if_,filestring,count,skip)
       count=else_[2]
       selse.append(else_)
@@ -751,7 +751,7 @@ def getWhile(line,filestring,line_cnt_):
         #print "linewhile:%s" % line_if_
         break
       elif cnt == line_cnt_:
-        print "line %s" %line_if_
+        #print "line %s" %line_if_
         in_while = 1
 
         #count+=1
@@ -761,8 +761,8 @@ def getWhile(line,filestring,line_cnt_):
 
         #print "linecnt:%s" % line_cnt_
         while_ = getStatement(line_if_, filestring, count,skip)
-        print "linewhile:%s" % line_if_
-        print "whileste:%s" %while_
+        #print "linewhile:%s" % line_if_
+        #print "whileste:%s" %while_
         count = while_[2]
         s_while_.append(while_)
         # if re.findall("ELSE", line_if_) and in_then_:
@@ -799,7 +799,7 @@ def getSelect(line,filestring,line_cnt_):
       continue
     elif not skip == 0:
       skip = skip - 1
-      print "countiii %s" % (skip)
+      #print "countiii %s" % (skip)
       continue
     elif re.findall("ENDTEST",line_select_) and in_else_:
       skip = count - line_cnt_ +1

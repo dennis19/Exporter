@@ -173,28 +173,34 @@ def upload_programs(program_,infile,filename_):
         break
     # endif
     # create statements, if if then skip lines
+    #print "if data %s" % line_
     if inst_flag_:
       if lineskip_[depth] != 0:
         lineskip_[depth] = lineskip_[depth] - 1
         continue
       else:
         statement_data_=IntermediateUpload.getStatementProducer(line_,filestring_,producer_,line_cnt_,skip)
-        createStatement(rob_cnt_, routine_, program_, scope_,statement_data_)    # endif
+        line_cnt_=statement_data_[2]
+        if statement_data_:
+          createStatement( rob_cnt_, routine_, program_, scope_,statement_data_)
+        #createStatement(rob_cnt_, routine_, program_, scope_,statement_data_)    # endif
     instructions_ += line_ + '\n'
   # endfor
   routine_instructions_=''
   for routine in routine_.Program.Routines:
     if not routine.Name== "PNS0001" and not routine== routine_:
-      routine_file_ = glob.glob(filename_[0:len(filename_) - file_length_] + routine.Name+".ls" )
-      if routine_file_:
-        if len(routine.Statements)<3:
-          routine_file_main_ = open(routine_file_[0], "r")
-          upload_programs(program_, routine_file_main_, filename_)
-      #   # endif
-        routine_instructions_ += line_ + '\n'
-      else:
-        pass
-
+      try:
+        routine_file_ = glob.glob(filename_[0:len(filename_) - file_length_] + routine.Name+".ls" )
+        if routine_file_:
+          if len(routine.Statements)<3:
+            routine_file_main_ = open(routine_file_[0], "r")
+            upload_programs(program_, routine_file_main_, filename_)
+      #     # endif
+          routine_instructions_ += line_ + '\n'
+        else:
+          pass
+      except:
+        print "%s not readable" % (filename_[0:len(filename_) - file_length_] + routine.Name + ".ls")
 
   return True
 
@@ -245,8 +251,8 @@ def OnStart():
   filestring_ = infile.read()
   infile.close()
   #endtry
-  if rob_cnt_.Name=="IRC5":
-    uploadvarABB.uploadvarABB_(program_, filestring_)
+  # if rob_cnt_.Name=="IRC5":
+  #   uploadvarABB.uploadvarABB_(program_, filestring_)
 
   for line_ in filestring_.split('\n'):
 
@@ -380,6 +386,7 @@ def readPos(s,robCnt,type,program,move_data_):
   kin_ = rob_cnt_.Kinematics
   comp_ = kin_.Component
   if type=="joint":
+    print "move %s" %move_data_[1]
     if move_data_[1][1] == "":
 
       s.JointSpeed = float(move_data_[1][0])/(100)
@@ -430,7 +437,7 @@ def readPos(s,robCnt,type,program,move_data_):
     for i in xrange(len(jv)):
       jv[i] = joints[i]
     mt.JointValues = jv
-    print "jointvalues %s" %jv
+    #print "jointvalues %s" %jv
     # convert into cartesian
     posFrame.PositionInReference = mt.Target
 
@@ -472,7 +479,14 @@ def createToolOffset(program,routine_,scope_,move_data_):
   rob_cnt_ = exec_.Controller
   kin_ = rob_cnt_.Kinematics
   comp_ = kin_.Component
-  callRoutine = program.findRoutine("POSREG_"+move_data_[6][0] )
+  callRoutine=None
+
+  for routine in program.Routines:
+    if re.search("POSREG_"+'PR'+obracket+move_data_[6][0][3:5],routine.Name):
+      #print "move %s" % routine.Name
+      callRoutine=routine
+  if not callRoutine:
+    callRoutine = program.findRoutine("POSREG_" + move_data_[6][0][:5])
 
   if callRoutine:
 
@@ -482,8 +496,12 @@ def createToolOffset(program,routine_,scope_,move_data_):
     offset_vec_vc_.translateAbs(-offset_vec_.Z,-offset_vec_.X,offset_vec_.Y)
     offset_vec_vc_.WPR=offset_statement_.Positions[0].PositionInReference.WPR
 
-  callRoutine = program.findRoutine(
-    "POSREG_" + move_data_[6][1])
+  for routine in program.Routines:
+    if re.search("POSREG_"+'PR'+obracket+move_data_[6][1][3:5],routine.Name):
+      #print "move %s" % routine.Name
+      callRoutine=routine
+  if not callRoutine:
+    callRoutine = program.findRoutine("POSREG_" + move_data_[6][1][:5])
 
   if callRoutine:
     pos_statement_ = callRoutine.Statements[0]
@@ -517,10 +535,11 @@ def createToolOffset(program,routine_,scope_,move_data_):
   s.createProperty(VC_STRING, "Register")
   s.createProperty(VC_STRING, "Speed")
   s.createProperty(VC_STRING, "AccuracyValue")
+  s.createProperty(VC_STRING, "AccelerationValue")
   s.getProperty('Position').Value = move_data_[6][1]
   s.getProperty('Register').Value = move_data_[6][0]
   s.getProperty('Speed').Value = str(move_data_[1][0])
-  print "move data %s" %move_data_[7]
+  #print "move data %s" %move_data_[7]
   if not move_data_[7][1]=="":
     if comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])):
       s.getProperty("AccuracyValue").Value = str(comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])).Value)
@@ -531,6 +550,18 @@ def createToolOffset(program,routine_,scope_,move_data_):
       s.getProperty("AccuracyValue").Value=str(move_data_[7][0])
     else:
       s.getProperty("AccuracyValue").Value="0"
+
+  if not move_data_[9][1]=="":
+    if comp_.getProperty("Registers::R" + move_data_[9][0] + uploadva.delChars(move_data_[9][1])):
+      s.getProperty("AccelerationValue").Value = str(comp_.getProperty("Registers::R" + move_data_[9][0] + uploadva.delChars(move_data_[9][1])).Value)
+      s.createProperty(VC_STRING, "AccelerationRegister")
+      s.getProperty("AccelerationRegister").Value = str(comp_.getProperty("Registers::R" + move_data_[9][0] + uploadva.delChars(move_data_[9][1])).Name)[11:]
+  else:
+    if not move_data_[9][0]=='fine':
+      s.getProperty("AccelerationValue").Value=str(move_data_[9][0])
+    else:
+      s.getProperty("AccelerationValue").Value=""
+
 
   ph_ = comp_.createBehaviour('rPythonProcessHandler', 'ToolOffset')
   pos=s.createPosition(move_data_[6][1])
@@ -592,15 +623,19 @@ def createIF(robCnt,routine,program,scope,if_data_):
   #create IfStatement
   s = addStatement(scope, routine, VC_STATEMENT_IF)
   s.Condition=makeConodition('IF',s,if_data_[0],robCnt)
+  #print "if data %s" % if_data_[1]
   for then_data_ in if_data_[1]:
     sthen=createStatement(robCnt,routine,program,s.ThenScope ,then_data_)
     s.ThenScope.Statements.append(sthen)
-    setLineSkip()
-  if not if_data_[2][0]=="":
-    for else_data_ in if_data_[2]:
-      selse=createStatement(robCnt,routine,program,s.ElseScope ,else_data_)
-      s.ElseScope.Statements.append(selse)
+    if len(if_data_[1])>1:
       setLineSkip()
+
+  if not if_data_[2]==[]:
+    if not if_data_[2][0]=="":
+      for else_data_ in if_data_[2]:
+        selse=createStatement(robCnt,routine,program,s.ElseScope ,else_data_)
+        s.ElseScope.Statements.append(selse)
+        setLineSkip()
 
   return s
 
@@ -621,8 +656,9 @@ def createWhile(robCnt,routine,program,scope,while_data_):
 def createPTP(robCnt,routine,scope,program,move_data_):
   if program.findRoutine("POSREG_"+move_data_[0]):
     callRoutine = program.findRoutine("POSREG_"+move_data_[0] )
-    s = addStatement(scope, routine, VC_STATEMENT_CALL)
-    s.Routine = callRoutine
+    s=createMovePosReg(program,routine,scope,move_data_,"joint")
+    #s = addStatement(scope, routine, VC_STATEMENT_CALL)
+    #s.Routine = callRoutine
   else:
     s = addStatement(scope, routine, VC_STATEMENT_PTPMOTION)
     readPos(s,robCnt,"joint",program,move_data_)
@@ -634,7 +670,7 @@ def createLinear(robCnt,routine,scope,program,move_data_):
   else:
     if program.findRoutine("POSREG_"+move_data_[0]):#re.search("PR" + obracket, move_data_[0]):
       callRoutine = program.findRoutine("POSREG_"+move_data_[0] )
-      s =createLinPosReg(program,routine,scope,move_data_)
+      s =createMovePosReg(program,routine,scope,move_data_,"lin")
       #addStatement(scope, routine, VC_STATEMENT_CALL)
       #s.Routine = callRoutine
     else:
@@ -696,7 +732,8 @@ def createLinPosReg(program,routine_,scope_,move_data_):
   s.getProperty('Position').Value = move_data_[0]
   #s.getProperty('Register').Value = move_data_[6][0]
   s.getProperty('Speed').Value = str(move_data_[1][0])
-  print "move data %s" %move_data_[7]
+  s.createProperty(VC_STRING, "AccelerationValue")
+  #print "move data %s" %move_data_[7]
   if not move_data_[7][1]=="":
     if comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])):
       s.getProperty("AccuracyValue").Value = str(comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])).Value)
@@ -707,6 +744,16 @@ def createLinPosReg(program,routine_,scope_,move_data_):
       s.getProperty("AccuracyValue").Value=str(move_data_[7][0])
     else:
       s.getProperty("AccuracyValue").Value="0"
+  if not move_data_[9][1]=="":
+    if comp_.getProperty("Registers::R" + move_data_[9][0] + uploadva.delChars(move_data_[9][1])):
+      s.getProperty("AccelerationValue").Value = str(comp_.getProperty("Registers::R" + move_data_[9][0] + uploadva.delChars(move_data_[9][1])).Value)
+      s.createProperty(VC_STRING, "AccelerationRegister")
+      s.getProperty("AccelerationRegister").Value = str(comp_.getProperty("Registers::R" + move_data_[9][0] + uploadva.delChars(move_data_[9][1])).Name)[11:]
+  else:
+    if not move_data_[9][0]=='fine':
+      s.getProperty("AccelerationValue").Value=str(move_data_[9][0])
+    else:
+      s.getProperty("AccelerationValue").Value=""
 
   ph_ = comp_.createBehaviour('rPythonProcessHandler', 'LinearPosReg')
   pos=s.createPosition(move_data_[0])
@@ -733,6 +780,115 @@ def createLinPosReg(program,routine_,scope_,move_data_):
   pos.PositionInReference = pos_
   return s
 
+def createMovePosReg(program,routine_,scope_,move_data_,type):
+  global glob_tool_,glob_frame_
+  exec_ = program.Executor
+  rob_cnt_ = exec_.Controller
+  kin_ = rob_cnt_.Kinematics
+  comp_ = kin_.Component
+  # callRoutine = program.findRoutine("POSREG_"+move_data_[6][0] )
+  #
+  # if callRoutine:
+  #
+  #   offset_vec_vc_=vcMatrix.new()
+  #   offset_statement_=callRoutine.Statements[0]
+  #   offset_vec_=offset_statement_.Positions[0].PositionInReference.P
+  #   offset_vec_vc_.translateAbs(-offset_vec_.Z,-offset_vec_.X,offset_vec_.Y)
+  #   offset_vec_vc_.WPR=offset_statement_.Positions[0].PositionInReference.WPR
+  #
+  callRoutine = program.findRoutine(
+    "POSREG_" + move_data_[0])
+
+  if callRoutine:
+    pos_statement_ = callRoutine.Statements[0]
+    pos_=vcMatrix.new()
+    pos_vec_ = pos_statement_.Positions[0].PositionInReference.P
+    pos_wpr_ = pos_statement_.Positions[0].PositionInReference.WPR
+    pos_.translateAbs(pos_vec_.X,pos_vec_.Y,pos_vec_.Z)
+    pos_.WPR=pos_wpr_
+    # pos_.translateRel(offset_vec_.X,offset_vec_.Y,offset_vec_.Z)
+    base=pos_statement_.Base
+
+  else :
+    pos_statement_ = move_data_[3]
+    pos_=vcMatrix.new()
+    pos_.translateRel(move_data_[2][0], move_data_[2][1], move_data_[2][2])
+    pos_.setWPR(move_data_[2][3], move_data_[2][4], move_data_[2][5])
+    if move_data_[4] == 0:
+      base = rob_cnt_.Bases[0]
+    else:
+      base = rob_cnt_.Bases[move_data_[4] - 1]
+
+  #pos_.translateRel(offset_vec_.X,offset_vec_.Y,offset_vec_.Z)
+
+
+
+  s = addStatement(scope_, routine_, 'Process')
+
+
+
+  s.createProperty(VC_STRING, "Position")
+  #s.createProperty(VC_STRING, "Register")
+  s.createProperty(VC_STRING, "Speed")
+  s.createProperty(VC_STRING, "AccuracyValue")
+  s.getProperty('Position').Value = move_data_[0]
+  #s.getProperty('Register').Value = move_data_[6][0]
+  s.getProperty('Speed').Value = str(move_data_[1][0])
+  s.createProperty(VC_STRING, "AccelerationValue")
+  #print "move data %s" %move_data_[7]
+  if not move_data_[7][1]=="":
+    if comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])):
+      s.getProperty("AccuracyValue").Value = str(comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])).Value)
+      s.createProperty(VC_STRING, "AccuracyRegister")
+      s.getProperty("AccuracyRegister").Value = str(comp_.getProperty("Registers::R" + move_data_[7][0] + uploadva.delChars(move_data_[7][1])).Name)[11:]
+  else:
+    if not move_data_[7][0]=='fine':
+      s.getProperty("AccuracyValue").Value=str(move_data_[7][0])
+    else:
+      s.getProperty("AccuracyValue").Value="0"
+  if not move_data_[9][1]=="":
+    if comp_.getProperty("Registers::R" + move_data_[9][0] + uploadva.delChars(move_data_[9][1])):
+      s.getProperty("AccelerationValue").Value = str(comp_.getProperty("Registers::R" + move_data_[9][0] + uploadva.delChars(move_data_[9][1])).Value)
+      s.createProperty(VC_STRING, "AccelerationRegister")
+      s.getProperty("AccelerationRegister").Value = str(comp_.getProperty("Registers::R" + move_data_[9][0] + uploadva.delChars(move_data_[9][1])).Name)[11:]
+  else:
+    if not move_data_[9][0]=='fine':
+      s.getProperty("AccelerationValue").Value=str(move_data_[9][0])
+    else:
+      s.getProperty("AccelerationValue").Value=""
+
+
+
+  #ph_.Script = TOOL_OFFSET_SCRIPT()
+
+  if type=="lin":
+    ph_ = comp_.createBehaviour('rPythonProcessHandler', 'LinearPosReg')
+    s.Name = 'LinearPosReg'
+    ph_.Script = TOOL_OFFSET_SCRIPT()
+  elif type=="joint":
+    ph_ = comp_.createBehaviour('rPythonProcessHandler', 'JointPosReg')
+    s.Name='JointPosReg'
+    ph_.Script = JOINT_POSREG_SCRIPT()
+  pos=s.createPosition(move_data_[0])
+  s.Process = ph_
+  if not glob_tool_ == "":
+    if glob_tool_=="0":
+      s.Tool=rob_cnt_.Tools[0]
+    else:
+      s.Tool = rob_cnt_.Tools[int(glob_tool_) - 1].Name
+  else:
+    s.Tool = pos_statement_.Tool
+
+  if not glob_frame_ == "":
+    if glob_frame_=="0":
+      s.Base=rob_cnt_.Bases[0]
+    else:
+      s.Base = rob_cnt_.Bases[int(glob_frame_) - 1].Name
+  else:
+    s.Base = base
+
+  pos.PositionInReference = pos_
+  return s
 
 def createSetDO(routine,scope,set_data):
 
@@ -788,7 +944,7 @@ def createWaitDI(routine,scope,wait_data):
         var_[i] = wait_data[0][i]  + wait_data[1][i] + var_comment_[i]
       if var_value_[i]=='ON':
         var_value_[i]=1
-      elif var_value_[i]=='OFF' or var_value_[i]=="":
+      elif var_value_[i]=='OFF':# or var_value_[i]=="":
         var_value_[i]=0
       i=i+1
     s=WAIT(scope,routine,var_,var_comment_,var_value_)
@@ -901,11 +1057,11 @@ def WAIT(scope_,routine_,var_,var_comment_,var_value_,):
   i=0
   while i<=len(var_)-1:
     s.createProperty(VC_STRING, "Variable %s"%i)
-    s.createProperty(VC_INTEGER, "Value %s"%i)
+    s.createProperty(VC_STRING, "Value %s"%i)
     s.createProperty(VC_STRING, "Comment %s" % i)
 
     s.getProperty("Variable %s"%i).Value = var_[i]
-    s.getProperty("Value %s"%i).Value = int(var_value_[i])
+    s.getProperty("Value %s"%i).Value = str(var_value_[i])
     s.getProperty("Comment %s" % i).Value = var_comment_[i]
     i=i+1
   s.Name = "WAIT"
@@ -1021,7 +1177,7 @@ def makeConodition(if_sel_,statement,cond_,robCnt):
       char_skip=getCharSkip(cond_)+5
     elif if_sel_=='WHILE':
       char_skip = getCharSkip(cond_) + 6
-  while re.search(r"(?P<signs>[\(\)\!\s\,]+)", cond_[len(cond_all_) + char_skip]) or re.search(
+  while re.search(r"(?P<signs>[\(\)\!\s\,\$\.]+)", cond_[len(cond_all_) + char_skip]) or re.search(
             r"(?P<var_type>[a-zA-Z]+)" + obracket,
             cond_[len(cond_all_) + char_skip:len(cond_all_) + char_skip + 4]) or re.search(r"(?P<logic>[a-zA-Z]+)", cond_[
       len(cond_all_) + char_skip]):
@@ -1175,66 +1331,67 @@ comp = getComponent()
 
 #---------------- STATEMENT EXECUTION -----------------
 def OnStatementExecute(exec_, stat):
-  i=0
-  index=0
-  curr_state_=exec_.CurrentStatement
-  print "start"
-  while index<=len(curr_state_.ParentRoutine.Statements)-1:
-    if exec_.CurrentStatement==curr_state_.ParentRoutine.Statements[index]:
-      break
-    if curr_state_.ParentRoutine.Statements[index].Type=="IfElse":
-      state=curr_state_.ParentRoutine.Statements[index].ThenScope.Statements[0].Type
-      #print "state %s" %state
-      if exec_.CurrentStatement==curr_state_.ParentRoutine.Statements[index].ThenScope.Statements[0]:
-        index=index+1
-        break
-
-
-      #break
-    index=index+1
-  label_nr_=curr_state_.getProperty("LabelNr").Value
-  #print "index:%s" %index
-  while i<= len(curr_state_.ParentRoutine.Statements)-1:
-    if curr_state_.ParentRoutine.Statements[i].Name=="LBL%s" %label_nr_:
-      print "%s" %i
-      break
-    i=i+1
-  if i<index:
-    while i<index-1:
-      print "i<index%s" %i
-      CallState(curr_state_.ParentRoutine.Statements[i+1],exec_)
-      delay(0.01)  
-      i=i+1
-      
-  if i>index:
-    print "i%s" %i
-    k=index
-    #while i<len(curr_state_.ParentRoutine.Statements)-1:
-    #  CallState(curr_state_.ParentRoutine.Statements[i+1],exec_)
-    #  delay(0.01)
-
-      #print "i>index%s" %i
-    #  i=i+1
-
-    while index<=k<len(curr_state_.ParentRoutine.Statements)-1:
-      curr_state_.ParentRoutine.Statements.remove(curr_state_.ParentRoutine.Statements[k])
-      print "state deleted%s" %curr_state_.ParentRoutine.Statements[k].Type
-      #print "deleted"
-      k=k+1
-
-def CallState(statement_,exec_):
-  z=0
-  #if statement_.Type=="IfElse":
-  #  while z<len(statement_.ThenScope.Statements):
-  #    CallState(statement_.ThenScope.Statements[z],exec_)
-      #print "%s"%z
-  #    z=z+1
-  #else:
-  #  exec_.callStatement(statement_,False)
-  #  print "state executed%s" %statement_.Type
-  exec_.callStatement(statement_,False)
-  print "state executed%s" %statement_.Type
-"""
+  pass
+#   i=0
+#   index=0
+#   curr_state_=exec_.CurrentStatement
+#   print "start"
+#   while index<=len(curr_state_.ParentRoutine.Statements)-1:
+#     if exec_.CurrentStatement==curr_state_.ParentRoutine.Statements[index]:
+#       break
+#     if curr_state_.ParentRoutine.Statements[index].Type=="IfElse":
+#       state=curr_state_.ParentRoutine.Statements[index].ThenScope.Statements[0].Type
+#       #print "state %s" %state
+#       if exec_.CurrentStatement==curr_state_.ParentRoutine.Statements[index].ThenScope.Statements[0]:
+#         index=index+1
+#         break
+# 
+# 
+#       #break
+#     index=index+1
+#   label_nr_=curr_state_.getProperty("LabelNr").Value
+#   #print "index:%s" %index
+#   while i<= len(curr_state_.ParentRoutine.Statements)-1:
+#     if curr_state_.ParentRoutine.Statements[i].Name=="LBL%s" %label_nr_:
+#       print "%s" %i
+#       break
+#     i=i+1
+#   if i<index:
+#     while i<index-1:
+#       print "i<index%s" %i
+#       CallState(curr_state_.ParentRoutine.Statements[i+1],exec_)
+#       delay(0.01)  
+#       i=i+1
+#       
+#   if i>index:
+#     print "i%s" %i
+#     k=index
+#     #while i<len(curr_state_.ParentRoutine.Statements)-1:
+#     #  CallState(curr_state_.ParentRoutine.Statements[i+1],exec_)
+#     #  delay(0.01)
+# 
+#       #print "i>index%s" %i
+#     #  i=i+1
+# 
+#     while index<=k<len(curr_state_.ParentRoutine.Statements)-1:
+#       curr_state_.ParentRoutine.Statements.remove(curr_state_.ParentRoutine.Statements[k])
+#       print "state deleted%s" %curr_state_.ParentRoutine.Statements[k].Type
+#       #print "deleted"
+#       k=k+1
+# 
+# def CallState(statement_,exec_):
+#   z=0
+#   #if statement_.Type=="IfElse":
+#   #  while z<len(statement_.ThenScope.Statements):
+#   #    CallState(statement_.ThenScope.Statements[z],exec_)
+#       #print "%s"%z
+#   #    z=z+1
+#   #else:
+#   #  exec_.callStatement(statement_,False)
+#   #  print "state executed%s" %statement_.Type
+#   exec_.callStatement(statement_,False)
+#   print "state executed%s" %statement_.Type
+# """
 
 def TOOL_OFFSET_SCRIPT():
   return """
@@ -1246,10 +1403,43 @@ comp = getComponent()
 
 #---------------- STATEMENT EXECUTION -----------------
 def OnStatementExecute(exec_, stat):
-  exec_.Controller.moveTo(stat.Positions[0].PositionInReference)
-
+  curr_state_=exec_.CurrentStatement
+  speed_=curr_state_.getProperty("Speed").Value
+  #acc_=curr_state_.getProperty("AccuracyValue").Value
+  #exec_.Controller.Speed=int(speed_)
+  #exec_.Controller.Acc=int(acc_)
+  #curr_state_.CartesianSpeed=int(speed_)
+  mt=exec_.Controller.createTarget()
+  mt.MotionType = VC_MOTIONTARGET_MT_LINEAR 
+  mt.Target=stat.Positions[0].PositionInReference
+  mt.CartesianSpeed=int(speed_)
+  #print "pos %s" %stat.Positions[0].PositionInReference
+  exec_.Controller.moveTo(mt)
 """
 
+def JOINT_POSREG_SCRIPT():
+  return """
+from vcRslProcessHandler import *
+from vcBehaviour import *
+import vcMatrix
+app = getApplication()
+comp = getComponent()
+
+#---------------- STATEMENT EXECUTION -----------------
+def OnStatementExecute(exec_, stat):
+  curr_state_=exec_.CurrentStatement
+  speed_=curr_state_.getProperty("Speed").Value
+  #acc_=curr_state_.getProperty("AccuracyValue").Value
+  #exec_.Controller.Speed=int(speed_)
+  #exec_.Controller.Acc=int(acc_)
+  #curr_state_.CartesianSpeed=int(speed_)
+  mt=exec_.Controller.createTarget()
+  mt.MotionType = VC_MOTIONTARGET_MT_JOINT
+  mt.Target=stat.Positions[0].PositionInReference
+  mt.JointSpeedFactor=int(speed_)
+  #print "pos %s" %stat.Positions[0].PositionInReference
+  exec_.Controller.moveTo(mt)
+"""
 
 def CALL_PARAM_HANDLER_SCRIPT():
   return """

@@ -55,13 +55,14 @@ def extendStatements(statement,statements):
 
 def OnStart():
   global controller
-  global text, statementCount, routine, uframe_num, utool_num, label
+  global text, statementCount, routine, uframe_num, utool_num, label,global_index,target_def_
   routine = getActiveRoutine()
   program = routine.Program
   executor = program.Executor
   comp = executor.Component
   controller = executor.Controller
-
+  global_index=1
+  target_def_=""
   if not routine:
     app.messageBox("No Routine selected, aborting.","Warning",VC_MESSAGE_TYPE_WARNING,VC_MESSAGE_BUTTONS_OK)
     return
@@ -74,13 +75,21 @@ def OnStart():
   #if routine.Name == 'PositionRegister': return
 
   # print 'Converting %s to LS' % routine.Name
-
+  if controller.Name=="IRC5":
+    producer_="ABB"
+  elif controller.Name=="R30iA":
+    producer_="Fanuc"
 
   for routine_ in program.Routines:
     if not re.findall("POSREG_PR",routine_.Name):
       convertRoutine(comp,routine_)
     else:
+      if producer_=="Fanuc":
+        ConvertGlobalPositions(comp, routine_)
       print "Routine %s is Position Register" %routine_.Name
+  note=comp.findBehaviour("PosReg_Init")
+  if note:
+    note.Note+="/POS\n"+target_def_
   #k=0
   # while k<len(comp.Properties):
   #   if re.findall("Registers::",comp.Properties[k].Name):
@@ -286,6 +295,121 @@ def convertRoutine(comp,routine):
 
   note.Note = text
 
+def ConvertGlobalPositions(comp,routine):
+
+  global controller
+  global text, statementCount, uframe_num, utool_num, label,global_index,target_def_
+  print 'Converting %s to LS' % routine.Name
+  rname = routine.Name
+  program_=routine.Program
+  executor_ = program_.Executor
+  rob_cnt_ = executor_.Controller
+
+  # k=0
+  # while k<len(comp.Properties):
+  #   if re.findall("Registers::",comp.Properties[k].Name):
+  #     #print "%s" %comp.Properties[k].Name
+  #     pass
+  #   k+=1
+  td = time.strftime("DATE %y-%m-%d  TIME %H:%M:%S")
+    #print "name %s" %rob_cnt_.Name
+  if rob_cnt_.Name=="IRC5":
+    producer_="ABB"
+    header="MODULE %s\n" %rname
+    pos_ = """ENDMODULE\n"""
+    #head_ = 'MODULE'
+    #filter_="*.mod"
+    #upload_programs(program_,infile,filename_)
+  elif rob_cnt_.Name=="R30iA":
+    producer_ = "FANUC"
+    header = """/PROG  %s
+    /ATTR
+    OWNER           = MNEDITOR;
+    COMMENT         = "%s";
+    PROG_SIZE       = 0;
+    CREATE          = %s;
+    MODIFIED        = %s;
+    FILE_NAME       = ;
+    VERSION         = 0;
+    LINE_COUNT      = 0;
+    MEMORY_SIZE     = 0;
+    PROTECT         = READ_WRITE;
+    TCD:  STACK_SIZE        = 0,
+          TASK_PRIORITY     = 50,
+          TIME_SLICE        = 0,
+          BUSY_LAMP_OFF     = 0,
+          ABORT_REQUEST     = 0,
+          PAUSE_REQUEST     = 0;
+    DEFAULT_GROUP   = 1,*,*,*,*;
+    CONTROL_CODE    = 00000000 00000000;
+    /APPL
+    /MN
+    """ % ("PosReg_Init", "PosReg_Init", td, td)
+    pos_ = """/POS\n"""
+    #head_ = '/PROG'
+    #filter_ = "*.ls"
+   #
+
+  note = comp.findBehaviour("PosReg_Init")
+  if not note:
+    text = header
+    note = comp.createBehaviour(VC_NOTE, "PosReg_Init")
+  else:
+    pos_=""
+    text=""
+
+  # endif
+
+  comp.createProperty(VC_BOOLEAN, "%s::SkipExecution" % "PosReg_Init")
+
+
+
+  mainroutine = comp.getProperty('MainRoutine')
+  if mainroutine:
+    stepValues = mainroutine.StepValues
+    if rname not in stepValues:
+      stepValues.append(rname)
+      mainroutine.StepValues = stepValues
+    # endif
+  # endif
+
+  label = 1
+  uframe_num = -1
+  utool_num = -1
+  statementCount = 1
+  ##for statement in getAllStatements(routine):
+  for statement in routine.Statements:
+    #text+= "%4i:  " % statementCount
+    line_data_=IntermediateConvert.getStatementData(statement)
+    text+= writeGlobalPos(line_data_)#+";\n"
+  # endfor
+
+  #text += pos_
+  # positions = []
+  # for s in routine.Statements:
+  #   if s.Type in [VC_STATEMENT_LINMOTION, VC_STATEMENT_PTPMOTION]:
+  #     if s.getProperty('INDEX'):
+  #       num = s.INDEX
+  #     else:
+  #       pName = s.Positions[0].Name
+  #       num = int(pName[pName.rindex('_') + 1:])
+  #     # endif
+  #     positions.append((num, s))
+  #   # endif
+  # # endif
+  # positions.sort()
+  targets=IntermediateConvert.getTarget(routine)
+  for t in targets:
+    target_def_ += doWriteGlobalTargetDefinition(t,global_index)
+  global_index+=1
+  note.Note += text
+
+def writeGlobalPos(line_data):
+  global global_index
+  line="  "+line_data[1][5]+"=P["+str(global_index)+"] ;\n"
+
+  print "line_data_ %s" %line_data
+  return line
 def writeLine(line_data_,producer_):
   global text, statementCount, uframe_num, utool_num, label
   if producer_=="ABB":
@@ -422,6 +546,75 @@ def doWriteTargetDefinition(target_data_):
   line +="};\n"
   return line
 
+def doWriteGlobalTargetDefinition(target_data_,index):
+
+  # uf = download.GetBaseIndex( statement,controller )
+  # ut = download.GetToolIndex( statement,controller )
+  #
+  # posFrame = statement.Positions[0]
+  # t4 = download.getValue( posFrame, 'JointTurns4', 0 )
+  # t5 = download.getValue( posFrame, 'JointTurns5', 0 )
+  # t6 = download.getValue( posFrame, 'JointTurns6', 0 )
+  # cf =download. getValue( posFrame, 'Configuration', 'F U T' )
+  # config = '%s, %i, %i, %i' % (cf, t4, t5, t6 )
+  #
+  # group = 1
+  # #print "pos %s" %posFrame.Name
+  # # try:
+  # if re.findall(obracket + "(?P<Nr>[0-9_]+)" + '(?P<comment>(\s*:.*)?)' + cbracket, posFrame.Name):
+  #   match_ = re.search(obracket + "(?P<Nr>[0-9_]+)" + '(?P<comment>(\s*:.*)?)' + cbracket, posFrame.Name)
+  #   if not match_.group('comment') == "":
+  #     comment = ":"+match_.group('comment')
+  #   else:
+  #     comment = match_.group('comment')
+  # elif re.findall("P(?P<Nr>[0-9]+)" ,posFrame.Name):
+  #   comment=""
+  # else:
+  #   comment = ":"+posFrame.Name
+  # #print "comment:%s" %comment
+  # except:
+  #   comment = None
+
+  if target_data_[3] and target_data_[3] != target_data_[4]:
+    line='P[%s]{ \n' % (index)
+  else:
+    line='P[%s]{ \n' % (index)
+  #endif
+  line+="    GP1:\n"
+  line +="         UF : %i, UT : %i," % (target_data_[0], target_data_[1])
+  # m = posFrame.PositionInReference
+  # p = m.P
+  # a = m.WPR
+  line +="              CONFIG : '%s, %s, %s, %s',\n" % (target_data_[2][0],target_data_[2][1],target_data_[2][2],target_data_[2][3])
+  line +="         X = %8.2f  mm,     Y = %8.2f  mm,     Z = %8.2f  mm,\n" % (target_data_[5][0],target_data_[5][1],target_data_[5][2])
+  line +="         W = %8.2f deg,     P = %8.2f deg,     R = %8.2f deg" % (target_data_[5][3],target_data_[5][4],target_data_[5][5])
+  # internalAxes = len(posFrame.InternalJointValues)
+  # i = 0
+  # for j, joint in enumerate( posFrame.ExternalJointValues ):
+  #   if groups[j+internalAxes] == group:
+  #     if j == 0: line+=",\n    "
+  #     else: line+=","
+  #   else:
+  #     i = 0
+  #     line +="\n"
+  #     group = groups[j+internalAxes]
+  #     line +="    GP%i:\n" % group
+  #     line +="         UF : %i, UT : %i,\n    " % (uf, ut)
+  #   #endif
+  #   if i > 0 and i%3 == 0:
+  #     ls.write("\n    ")
+  #   #endif
+  #   if group == 1:
+  #     line +="     E%i = %8.2f %s" % (j+1, joint.Value, jUnits[internalAxes+j])
+  #   else:
+  #     line +="     J%i = %8.2f %s" % (i+1, joint.Value, jUnits[internalAxes+j])
+  #   #endif
+  #   i += 1
+  #endfor
+  line +="\n"
+  line +="};\n"
+  return line
+
 
 def writeCall(call_data_):
   line="CALL %s" % (call_data_[0])
@@ -476,7 +669,9 @@ def writeWAIT(wait_data_):
   if len(wait_data_)>1:
     line+="( "
     while i<=len(wait_data_)-1:
-      line+=wait_data_[i][0]+"["+wait_data_[i][1]+":"+wait_data_[i][2]+"]=" +wait_data_[i][3]
+      line+=wait_data_[i][0]+"["+wait_data_[i][1]+":"+wait_data_[i][2]+"]"
+      if not wait_data_[i][3]=="":
+        line+="=" +wait_data_[i][3]
 
       if i<len(wait_data_)-1 :
         if not wait_data_[i+1][0]=="":
@@ -485,7 +680,9 @@ def writeWAIT(wait_data_):
     line+=")"
   else:
 
-    line += wait_data_[i][0] + "[" + wait_data_[i][1] + wait_data_[i][2] + "]=" +wait_data_[i][3]
+    line += wait_data_[i][0] + "[" + wait_data_[i][1] + wait_data_[i][2] + "]"
+    if not wait_data_[i][3] == "":
+      line += "=" + wait_data_[i][3]
   #line+=";\n"
   # if statement.Type=="Process":
   #   line="WAIT ("
@@ -616,7 +813,7 @@ def writeIf(if_data_):
   line = "IF %s," % (if_data_[0])
   for data_ in if_data_[1]:
     line+=writeLineFanuc(data_)
-
+    statementCount -= 1
   #line +=";\n"
   # if statement.ThenScope.Statements[0].Type == "Process":
   #   if statement.ThenScope.Statements[0].getProperty("LabelNr"):
@@ -808,7 +1005,7 @@ def writeMotion(motion_data_):
     motion_data_[5]=":"+motion_data_[5]
 
   if motion_data_[2] == "joint":
-    line += "J %s[%s%s] %s%%"%(motion_data_[3], motion_data_[4], motion_data_[5],str(100*motion_data_[6]))
+    line += "J %s[%s%s] %s%%"%(motion_data_[3], motion_data_[4], motion_data_[5],motion_data_[6])
   else:
     # print "pos %s" %statement.Positions[0].PositionInWorld.P.X
     line += "L %s[%s%s] %smm/sec" %(motion_data_[3], motion_data_[4], motion_data_[5], motion_data_[6])
@@ -816,9 +1013,13 @@ def writeMotion(motion_data_):
 
   line+=" %s" % (motion_data_[7])
 
+
   if not motion_data_[9]=="":
     line+=" Tool_Offset,%s" %motion_data_[9]
 
+
+  if not motion_data_[10]=="":
+    line+=" %s" %motion_data_[10]
   #line+=" ;\n"
   return line
 

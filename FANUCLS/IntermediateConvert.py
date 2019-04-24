@@ -75,9 +75,10 @@ def OnStart():
 
 
   for routine in program.Routines:
-    if not re.findall("POSREG_PR",rname):
+    if not re.findall("POSREG_",rname):
       convertRoutine(comp,routine)
     else:
+      ConvertGlobalPositions(comp,routine)
       print " Routine %s is Position Register" %rname
   #k=0
   # while k<len(comp.Properties):
@@ -266,6 +267,91 @@ def convertRoutine(comp,routine):
   note.Note = text
 
 
+def ConvertGlobalPositions(comp,routine):
+
+  global controller
+  global text, statementCount, uframe_num, utool_num, label
+  print 'Converting %s to LS' % routine.Name
+  #rname = routine.Name
+
+  # k=0
+  # while k<len(comp.Properties):
+  #   if re.findall("Registers::",comp.Properties[k].Name):
+  #     #print "%s" %comp.Properties[k].Name
+  #     pass
+  #   k+=1
+  note = comp.findBehaviour("PosReg_Init")
+  if not note:
+    note = comp.createBehaviour(VC_NOTE, "PosReg_Init")
+  # endif
+
+  comp.createProperty(VC_BOOLEAN, "%s::SkipExecution" % "PosReg_Init")
+
+  header = """/PROG  %s
+  /ATTR
+  OWNER           = MNEDITOR;
+  COMMENT         = "%s";
+  PROG_SIZE       = 0;
+  CREATE          = %s;
+  MODIFIED        = %s;
+  FILE_NAME       = ;
+  VERSION         = 0;
+  LINE_COUNT      = 0;
+  MEMORY_SIZE     = 0;
+  PROTECT         = READ_WRITE;
+  TCD:  STACK_SIZE        = 0,
+        TASK_PRIORITY     = 50,
+        TIME_SLICE        = 0,
+        BUSY_LAMP_OFF     = 0,
+        ABORT_REQUEST     = 0,
+        PAUSE_REQUEST     = 0;
+  DEFAULT_GROUP   = 1,*,*,*,*;
+  CONTROL_CODE    = 00000000 00000000;
+  /APPL
+  /MN
+  """
+  td = time.strftime("DATE %y-%m-%d  TIME %H:%M:%S")
+  text = header % (rname, rname, td, td)
+
+  mainroutine = comp.getProperty('MainRoutine')
+  if mainroutine:
+    stepValues = mainroutine.StepValues
+    if rname not in stepValues:
+      stepValues.append(rname)
+      mainroutine.StepValues = stepValues
+    # endif
+  # endif
+
+  label = 1
+  uframe_num = -1
+  utool_num = -1
+  statementCount = 1
+  ##for statement in getAllStatements(routine):
+  for statement in routine.Statements:
+    writeStatement(statement)
+  # endfor
+  pos_ = """/POS\n"""
+  text += pos_
+  positions = []
+  for s in routine.Statements:
+    if s.Type in [VC_STATEMENT_LINMOTION, VC_STATEMENT_PTPMOTION]:
+      if s.getProperty('INDEX'):
+        num = s.INDEX
+      else:
+        pName = s.Positions[0].Name
+        num = int(pName[pName.rindex('_') + 1:])
+      # endif
+      positions.append((num, s))
+    # endif
+  # endif
+  positions.sort()
+
+  for n, s in positions:
+    text += doWriteTargetDefinition(n, s)
+
+  note.Note = text
+
+
 def getStatementData( statement ):
   global text, statementCount, uframe_num, utool_num, label
   line_data_=["",""]
@@ -328,6 +414,9 @@ def getStatementData( statement ):
     elif re.findall("LinearPosReg",statement.Name):
       line_data_[0]="Movement"
       line_data_[1]=getMotion(statement)
+    elif re.findall("JointPosReg", statement.Name):
+      line_data_[0] = "Movement"
+      line_data_[1] = getMotion(statement)
   elif statement.Type==VC_STATEMENT_RETURN:
     line_data_[0]="Return"
     line_data_[1]=getReturn(statement)
@@ -497,10 +586,10 @@ def getWAIT(statement):
     i=0
     while statement.getProperty("Variable %s" %(i)):
       if not statement.getProperty("Variable %s" %(i)).Value =="":
-        if re.search(r"(?P<var_type>[a-zA-Z]+)", statement.getProperty("Variable %s" % i).Value):
+        if re.search(r"(?P<var_type>[a-zA-Z\!]+)", statement.getProperty("Variable %s" % i).Value):
         #print "wait:%s" %statement.getProperty("Variable %s" %i).Value
           type_def_=re.search(
-          r"(?P<var_type>[a-zA-Z]+)" + "(?P<Nr>[0-9_]+)",# + r"(?P<comment>[a-zA-Z]?)",
+          r"(?P<var_type>[a-zA-Z\!]+)" + "(?P<Nr>[0-9_]+)",# + r"(?P<comment>[a-zA-Z]?)",
           statement.getProperty("Variable %s" % i).Value)
         #reg_type=type_def_.group("regType")
           type_ = type_def_.group("var_type")
@@ -508,12 +597,17 @@ def getWAIT(statement):
           comment_=statement.getProperty("Comment %s" % i).Value#type_def_.group("comment")
         # if not comment_=="":
         #   comment_=":"+comment_
-
           if not (type_=="R" or type_=="F" or type_=="M"):
             if statement.getProperty("Value %s" % i).Value == 1:
               value_ = "ON"
             elif statement.getProperty("Value %s" % i).Value == 0:
               value_ = "OFF"
+            elif statement.getProperty("Value %s" % i).Value == "1":
+              value_ = "ON"
+            elif statement.getProperty("Value %s" % i).Value == "0":
+              value_ = "OFF"
+            else:
+              value_ = str(statement.getProperty("Value %s" % i).Value)
           else: value_=str(statement.getProperty("Value %s" % i).Value)
           wait_data_.append([type_, index_, comment_, value_])
         #line+=type_+"["+index_+comment_+']='+str(statement.getProperty("Value %s" %i).Value)
@@ -528,9 +622,11 @@ def getWAIT(statement):
         #   wait_data_.append([type_,nr_def.group("Nr"), statement.getProperty("Comment %s" % i).Value, ""])
         #   #line += type_ + "[" + nr_def.group("Nr") + ":" + statement.getProperty("Comment %s" % i).Value + "]"
         # else:
-          if statement.getProperty("Value %s" %i).Value==1:
+          print "value %s%s" % (
+          statement.getProperty("Variable %s" % (i)).Value , statement.getProperty("Value %s" % i).Value)
+          if statement.getProperty("Value %s" %i).Value=="1":
             value_="ON"
-          elif statement.getProperty("Value %s" % i).Value == 0:
+          elif statement.getProperty("Value %s" % i).Value == "0":
             value_ = "OFF"
           wait_data_.append(["DI", nr_def.group("Nr"), statement.getProperty("Comment %s" % i).Value, value_])
           #line+="DI"+"["+nr_def.group("Nr")+":"+statement.getProperty("Comment %s" %i).Value+"]"
@@ -551,7 +647,7 @@ def getWAIT(statement):
       if statement.InputValue:
         value_ = "ON"
       else:
-        value_ += "OFF"
+        value_ = "OFF"
       wait_data_.append(["DI",str(statement.InputPort),statement.Name,value_])
     # endif
   return wait_data_
@@ -586,11 +682,12 @@ def getSetVariable(statement):
 
 
   type_def_=re.search(
-          r"(?P<var_type>[a-zA-Z]+)" + "(?P<Nr>[0-9_]+)" + r"(?P<comment>[a-zA-Z]+)",
+          r"(?P<var_type>[a-zA-Z]+)" + "(?P<Nr>[0-9_]+)" + r"(?P<comment>[a-zA-Z\-]+)",
     statement.ValueExpression)
   var_=""
   index_=""
   comment_=""
+
   if type_def_:
     value_expression_ = type_def_.group("var_type")+"["+type_def_.group("Nr")+":"+type_def_.group("comment")+"]"
     if not re.findall("Parameter",value_expression_):
@@ -612,8 +709,7 @@ def getSetVariable(statement):
     var_ = "AR"
     index_ = nr_def_.group("Nr")
   else:
-    #print "setvar %s" %set_var_data[0]
-    if not (set_var_data[0] == "R" or set_var_data[0] == "F" or set_var_data[0] == "M"):
+    if not (set_var_data[0] == "R" or set_var_data[0] == "F" or set_var_data[0] == "M" or set_var_data[0]=="GO"):
       if statement.ValueExpression == "1":
         var_ = "ON"
       elif statement.ValueExpression=="0":
@@ -639,6 +735,7 @@ def getIf(statement):
   #label += 1
   if statement.ParentRoutine.Program.Executor.Controller.Name=="R30iA":
     condition_=transformConditionFanuc(statement)
+
   elif statement.ParentRoutine.Program.Executor.Controller.Name=="IRC5":
     condition_ = transformConditionAbb(statement)
   if_data_.append(condition_)
@@ -697,6 +794,7 @@ def getMotion(statement):
   executor = program.Executor
   comp = executor.Component
   controller = executor.Controller
+  num=None
   if not statement.getProperty('INDEX'):
     indices = {}
     maxIndex = 0
@@ -723,8 +821,10 @@ def getMotion(statement):
     # endtry
 
     statement.createProperty(VC_INTEGER, 'INDEX')
-
-    statement.INDEX = num
+    if num:
+      statement.INDEX = num
+    else:
+      statement.INDEX=999
     if indices.get(num, False):
       statement.INDEX = maxIndex + 1
       """
@@ -740,15 +840,21 @@ def getMotion(statement):
 
   pointIndex = statement.INDEX
 
-  uf = statement.Base.Name#download.GetBaseIndex(statement, controller)
+  if statement.Base:
+    uf = statement.Base.Name#download.GetBaseIndex(statement, controller)
+  else:
+    uf="UFrame1"
   #if uframe_num != uf:
     #uframe_num = uf
     #line += "UFRAME_NUM = %i ;\n" % (uf)
     #statementCount += 1
     #line += "%4i:  " % statementCount
     # endif
+  if statement.Tool:
+    ut = statement.Tool.Name#download.GetToolIndex(statement, controller)
+  else:
+    uf="UTool1"
 
-  ut = statement.Tool.Name#download.GetToolIndex(statement, controller)
   #if utool_num != ut:
     #utool_num = ut
     #line += "UTOOL_NUM = %i ;\n" % (ut)
@@ -771,6 +877,18 @@ def getMotion(statement):
   else:
     zone="FINE"
 
+  if statement.getProperty("AccelerationRegister"):
+    accel_ = statement.getProperty("AccelerationRegister").Value
+    zone_def_ = re.search("R" + "(?P<Nr>[0-9_]+)", zone)
+    accel_ = "ACC R[" + zone_def_.group('Nr') + ":" + zone[1 + len(zone_def_.group('Nr')):] + "]"
+
+  elif statement.getProperty("AccelerationValue"):
+    accel_ = statement.getProperty("AccelerationValue").Value
+    if not accel_=="":
+      accel_ = "ACC" + str(int(accel_))
+  else:
+    accel_ = ""
+
   if statement.getProperty("SpeedRegister"):
     speed_=statement.getProperty("SpeedRegister").Value
     speed_def_=re.search("R"+"(?P<Nr>[0-9_]+)",speed_)
@@ -779,9 +897,10 @@ def getMotion(statement):
     if statement.Type == VC_STATEMENT_LINMOTION:
       speed_=int(statement.MaxSpeed)
     elif statement.Type == VC_STATEMENT_PTPMOTION:
-      speed_=int(statement.JointSpeed)
+      speed_=statement.JointSpeed
     else:
       speed_=statement.getProperty('Speed').Value
+
   pName = statement.Positions[0].Name
   #print "name:%s" %pName
   if pName[:2] == 'PR':
@@ -807,13 +926,18 @@ def getMotion(statement):
 
   if statement.Type == VC_STATEMENT_LINMOTION:
     # print "pos %s" %statement.Positions[0].PositionInWorld.P.X
-    motion_data_=[uf,ut,"lin",posType,pointIndex,pName, speed_, zone,"",""]
+    motion_data_=[uf,ut,"lin",posType,pointIndex,pName, speed_, zone,"","",accel_]
     #line += "L %s[%i%s]  %gmm/sec %s" % (posType, pointIndex, pName, statement.MaxSpeed, zone)
   elif statement.Type == VC_STATEMENT_PTPMOTION:
-    motion_data_ = [uf, ut, "joint", posType, pointIndex, pName, speed_, zone,"",""]
+    motion_data_ = [uf, ut, "joint", posType, pointIndex, pName, int(float(speed_)*100), zone,"","",accel_]
     #line += "J %s[%i%s]  %g%% %s" % (posType, pointIndex, pName, statement.JointSpeed * 100, zone)
+  elif re.findall("Linear",statement.Name):
+    motion_data_ = [uf, ut, "lin", posType, pointIndex, pName, speed_, zone, "","",accel_]
+  elif re.findall("Joint", statement.Name):
+    motion_data_ = [uf, ut, "joint", posType, pointIndex, pName, int(speed_), zone, "", "", accel_]
   else:
-    motion_data_ = [uf, ut, "lin", posType, pointIndex, pName, speed_, zone, "",""]
+    motion_data_ = [uf, ut, "lin", posType, pointIndex, pName, speed_, zone, "","",accel_]
+
     # print "pos %s" %statement.Positions[0].PositionInWorld.P.X
     #line += "L %s[%i%s]  %gmm/sec %s" % (posType, pointIndex, pName, int(statement.getProperty('Speed').Value), zone)
   # endif

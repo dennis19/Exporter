@@ -101,6 +101,7 @@ def getStatementProducer(line,filestring,producer_,line_cnt_,skip):
     statement_data_=IntermediateUploadABB.getStatement(line,filestring,line_cnt_,skip)
 
   elif producer_=="FANUC":
+
     statement_data_ = getStatement(line, filestring)
     statement_data_.append(0)
   line_cnt_=statement_data_[2]
@@ -110,7 +111,10 @@ def getStatementProducer(line,filestring,producer_,line_cnt_,skip):
 # read in line to find command and get data for statement (FANUC)
 def getStatement(line,filestring):
 
-  if re.findall("  !", line):
+  if re.findall("//",line):
+    statement_type_=""
+    data_=""
+  elif re.findall("  !", line):
     statement_type_ = "Comment"
     data_ = getComment(line)
   elif re.findall(":J ", line):
@@ -181,8 +185,9 @@ def getMovementData(line_,filestring_,type_):
   base=0
   skip = 1
   point_=""
-  speed_=0
-  acc_=["",""]
+  speed_=[100,""]
+  acc_=[0,""]
+  accel_ = [0, ""]
   offset_data_=["",""]
   posname = re.search(pnum_,line_)
   #read in speed and coordinates
@@ -192,8 +197,9 @@ def getMovementData(line_,filestring_,type_):
 
     speed_=getSpeed(line_,type_)
     acc_=getAccuracy(line_)
+    accel_=getAcceleration(line_)
     for lineFindPos in filestring_.split('\n'):
-      FindPosMatch=re.findall('P'+obracket+posname.group('pnum')+cbracket+obrace,lineFindPos)
+      FindPosMatch=re.findall('P'+obracket+posname.group('pnum')+ '(?P<comment>(?:\s*:.*)?)'+cbracket+obrace,lineFindPos)
       if FindPosMatch:
         for lineFindCoord in filestring_.split('\n'):
           if lineFindCoord != lineFindPos and skip==1:
@@ -218,7 +224,7 @@ def getMovementData(line_,filestring_,type_):
             idw=getCoordinates(w,'w',lineFindCoord)
           if joints[0]==0:
             joints[0]=getCoordinates(j1,'j1',lineFindCoord)
-            print "joints [00 %s" %joints[0]
+            #print "joints [00 %s" %joints[0]
           if joints[1] == 0:
             joints[1] = getCoordinates(j2, 'j2', lineFindCoord)
           if joints[2] == 0:
@@ -241,13 +247,14 @@ def getMovementData(line_,filestring_,type_):
     point_="PR["+posr_name_.group('pnum') + posr_name_.group('comment')+"]"
     speed_=getSpeed(line_,type_)
     acc_ = getAccuracy(line_)
+    accel_=getAcceleration(line_)
   # get Tooloffset
   if re.findall("Tool_Offset,PR",line_):
     offset_data_=getToolOffset(line_)
 
 
   coordinates_=[idx,idy,idz,idw,idp,idr]
-  moveData=[point_,speed_,coordinates_,cfgData,base,tool,offset_data_,acc_,joints]
+  moveData=[point_,speed_,coordinates_,cfgData,base,tool,offset_data_,acc_,joints,accel_]
   return moveData
 
 def getToolOffset(line):
@@ -282,10 +289,27 @@ def getAccuracy(line):
 
   return acc_data_
 
+def getAcceleration(line):
+  accel_data_=["",""]
+  #print "line %s" %line
+  if re.search("ACC"+"(?P<Nr>[0-9_]+)",line):
+    print " accel %s" % accel_data_
+    acc_def_=re.search("ACC"+"(?P<Nr>[0-9_]+)",line)
+    accel_data_[0]=acc_def_.group('Nr')
+  elif re.search("ACC "+rnum,line):
+    acc_def_=re.search("ACC "+rnum, line)
+    comment = acc_def_.group('comment')
+    register = acc_def_.group('pnum')
+    accel_data_[0] = register
+    accel_data_[1] = comment.split("]")[0]
+  # elif re.search("FINE",line):
+  #   acc_data_[0]="fine"
+  return accel_data_
+
 def getSpeed(line_, type_):
   speed_data=["",""]
-  if re.search(r" R" + obracket, line_):
-
+  print "hii"
+  if re.search(sp+r"R" + obracket, line_) and (re.search(cbracket+"%", line_) or re.search(cbracket+"mm", line_)) :
     speed_ = re.search(rnum, line_)
     if speed_:
 
@@ -294,8 +318,6 @@ def getSpeed(line_, type_):
       speed_data[0] = register
       speed_data[1] = comment.split("]")[0]
   elif type_=="joint":
-
-
     speed_ = re.search(r"(?P<speed>[a-zA-Z0-9_]+)%", line_)
     speed_data[0] = speed_.group('speed')
   elif type_ == "lin":
@@ -316,7 +338,7 @@ def getCoordinates(matchString,matchVar,line):
   matched=re.search(matchString,line)
   idmatched=0
   if matched:
-    print "matched %s" %line
+    #print "matched %s" %line
     idmatched = float(matched.group(matchVar))
   return idmatched
 
@@ -326,7 +348,7 @@ def getJoint(matchString,matchVar,line):
   matched=re.search(matchString,line)
   idmatched=0
   if matched:
-    print "matched %s" %line
+    #print "matched %s" %line
     idmatched = float(matched.group(matchVar))
   return idmatched
 
@@ -367,12 +389,16 @@ def getWait(line):
     port_value_ = re.search(
       "WAIT "  + r"(?P<var_type>[a-zA-Z]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket,
       line)
+  if not port_value_:
+    port_value_ = re.search(
+      "WAIT " + orbracket+orbracket+ r"(?P<var_type>[a-zA-Z]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' + cbracket,
+      line)
   variable_type_[i]=port_value_.group('var_type')
   variable_nr_[i]=port_value_.group('Nr')
 
   var_comment_ = port_value_.group('comment')
   var_comment_split_[i] = var_comment_.split(']')[0]
-  value_def_ = re.search(variable_type_[i] + obracket + variable_nr_[i] + var_comment_split_[i] + cbracket + eq + r"(?P<value>[a-zA-Z0-9]+)", line)
+  value_def_ = re.search(variable_type_[i] + obracket + variable_nr_[i] + var_comment_split_[i] + cbracket +r"(?P<eq>[\=\<\>]+)" + r"(?P<value>[a-zA-Z0-9]+)", line)
   if value_def_:
     value_[i] = value_def_.group('value')
   if i<len(var_comment_.split(']'))-1:
@@ -389,12 +415,13 @@ def getWait(line):
 
     var_comment_split_[i] = port_value_.group('comment')
 
-    value_def_ = re.search(
-      variable_type_[i] + obracket + variable_nr_[i] + var_comment_split_[i] + eq + r"(?P<value>[a-zA-Z0-9]+)", var_comment_.split("]")[i]+var_comment_.split("]")[i+1])
-    if value_def_:
-      value_[i] = value_def_.group('value')
     if not i < len(var_comment_.split(']'))-1:
       break
+    value_def_ = re.search(
+      variable_type_[i] + obracket + variable_nr_[i] + var_comment_split_[i]  +r"(?P<eq>[\=\<\>]+)" + r"(?P<value>[a-zA-Z0-9]+)", var_comment_.split("]")[i]+var_comment_.split("]")[i+1])
+    if value_def_:
+      value_[i] = value_def_.group('value')
+
     if re.search(orbracket,var_comment_.split(']')[i+1]):
       print "break"
     i = i + 1
@@ -419,8 +446,8 @@ def getSetDO(line):
 
 def getComment(line):
   #print "line %s" %line
-  commentString = re.search("!(?P<comment>[a-zA-Z0-9_\-\s\:\/\=\>\[\]\.\,\(\)\!\*]+)", line)
-  comment_=commentString.group('comment')
+  commentString = re.search(r"!(.*)",line)#("!(?P<comment>[a-zA-Z0-9_\-\s\:\/\=\>\[\]\.\,\(\)\!\*\?\+]+)", line)
+  comment_=commentString.group(0)[1:-1]
   return comment_
 
 def getIf(line,filestring):
@@ -428,8 +455,10 @@ def getIf(line,filestring):
   else_data=[]
 
   cond_def_=re.search("IF "+r'(.*)'+comma,line)
+  if not cond_def_:
+    cond_def_=re.search("IF "+r'(.*)'+"THEN",line)
   cond_=cond_def_.group(0)
-
+  print "cond %s" %cond_
   #condition_
   then_data_.append(getStatement(line[7:],filestring))
   else_data.append("")
@@ -447,7 +476,7 @@ def getSelect(line,filestring):
   for line_select_ in filestring.split('\n'):
     select_choices_= re.search(eq+"(?P<Nr>[0-9_]+)"+comma,line_select_)
     then_data_=[]
-    if re.findall('ELSE,',line_select_):
+    if re.findall('ELSE,',line_select_) and in_select_:
       in_select_=0
       selse.append(getStatement(line_select_,filestring))
 
@@ -490,8 +519,8 @@ def getLineNr(line):
 def getCondition(line,cond_all_,char_skip):
   condition_ = ["", "", "","","","",""]
 
-  if re.search(r"(?P<signs>[\(\)\!\s\,]+)", line[len(cond_all_) + char_skip]):
-    conddef_ = re.search(r"(?P<signs>[\(\)\!\s\,]+)", line[len(cond_all_) + char_skip])
+  if re.search(r"(?P<signs>[\(\)\!\s\,\$\.]+)", line[len(cond_all_) + char_skip]):
+    conddef_ = re.search(r"(?P<signs>[\(\)\!\s\,\$\.]+)", line[len(cond_all_) + char_skip])
     cond=conddef_.group('signs')
     condition_[0] = cond
   elif re.search(r"(?P<var_type>[a-zA-Z]+)" + obracket ,
@@ -570,6 +599,7 @@ def getSetVariable(line):
     variable_nr1_ = set_var_def_.group('Nr1')
     var_comment1_ = set_var_def_.group('comment1')
     value_ = set_var_def_.group('value')
+
     set_var_data = [variable_type1_, variable_nr1_, var_comment1_, value_, "", ""]
     return set_var_data
 

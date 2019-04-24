@@ -78,173 +78,170 @@ def OnAbort():
 def OnStop():
   cleanUp()
 
-def uploadvarABB_(program, infile):
+def uploadvarABB_( infile):
   filestring = infile.read()
   infile.close()
 
-  executor = program.Executor
-  comp = executor.Component
-  robCnt = executor.Controller
-  tool_data_=[]
-  pos_data_ = []
-  var_data_ = []
+  frames=[]
+  position = []
+  register = []
 
   for line in filestring.split('\n'):
     if re.findall("tooldata",line) and not re.findall("LOCAL", line):
-      tool_data_.append(getToolFrames(line))
+      frames.append(getToolFrames(line))
     if (re.findall("robtarget",line) or re.findall("jointtarget",line))and not re.findall("LOCAL", line):
-      pos_data_.append(getGlobPos(line))
+      position.append(getGlobPos(line))
     if (re.findall("num",line) or re.findall("bool",line) or re.findall("speeddata",line))and not re.findall("LOCAL", line):
-      var_data_.append(getGlobVar(line))
+      register.append(getGlobVar(line))
   # endfor
   #print "tool %s" % tool_data_
-  if tool_data_:
-    #tools = re_frame.finditer(toolString)
-    for t in tool_data_[0]:
-      t_name_ = t[0]
-      #print "tool %s" %t_name_
-      xx = t[1][0]
-      yy = t[1][1]
-      zz = t[1][2]
-      ww = t[1][3]
-      pp = t[1][4]
-      rr = t[1][5]
-      #
-      m = vcMatrix.new()
-      m.translateAbs(xx, yy, zz)
-      m.setWPR(ww, pp, rr)
-      # if tindex > len(robCnt.Tools):
-      tool = robCnt.addTool()
-      tool.Name = t_name_
-      # # endif
-      #
-      tool.PositionMatrix=m
-  if pos_data_:
-    base = 0
-    tool = 0
-    #posregs = re_posregcart.finditer(posregString)
-    #print "pos_data_ %s" % pos_data_
-    for p in pos_data_:
-      p_name_ = p[0]
-      #print "p_name %s" %p_name_
-      # comment = preg_.group(3)
-      # if comment:
-      #   name_ = "PR[" + '%i' % pindex + ':' + comment + "]"
-      # else:
-      #   name_ = "PR[" + '%i' % pindex + "]"
-      routine = program.findRoutine( "POSREG_"+p_name_)
-      if routine:
-        routine.clear()
-      else:
-        routine = program.addRoutine( "POSREG_"+p_name_)
-      if p[3]=="coord":
-        xx = p[1][0]
-        yy = p[1][1]
-        zz = p[1][2]
-        ww = p[1][3]
-        pp = p[1][4]
-        rr = p[1][5]
-      #cfg = preg_.group('fut')
-      # if cfg == 'F': cfg = 'F U T'
-      # if cfg == 'N': cfg = 'N U T'
-      # jt1 = eval(preg_.group('t1'))
-      #   jt2 = eval(preg_.group('t2'))
-      #   jt3 = eval(preg_.group('t3'))
-      #
-        m = vcMatrix.new()
-        m.translateAbs(xx, yy, zz)
-        m.setWPR(ww, pp, rr)
-      #
-        stmt = routine.addStatement(VC_STATEMENT_PTPMOTION)
-        posFrame = stmt.Positions[0]
-        posFrame.PositionInReference = m
-      elif p[3]=="joint":
-        j1_deg_ = p[1][0]
-        j2_deg_ = p[1][1]
-        j3_deg_ = p[1][2]
-        j4_deg_ = p[1][3]
-        j5_deg_ = p[1][4]
-        j6_deg_ = p[1][5]
-
-
-
-        joints=[j1_deg_,j2_deg_,j3_deg_,j4_deg_,j5_deg_,j6_deg_]
-
-        stmt = routine.addStatement(VC_STATEMENT_PTPMOTION)
-        # read in jointvalues
-        posFrame = stmt.Positions[0]
-        mt = robCnt.createTarget()
-        mt.MotionType = VC_MOTIONTARGET_MT_JOINT
-        mt.UseJoints = True
-
-        jv = mt.JointValues
-        for i in xrange(len(jv)):
-          jv[i] = joints[i]
-        mt.JointValues = jv
-        posFrame.PositionInReference = mt.Target
-
-      #   posFrame.Configuration = cfg
-      #   if base == 0:
-      #     stmt.Base = robCnt.Bases[0]
-      #   else:
-      #     stmt.Base = robCnt.Bases[base - 1]
-      #   # endif
-      #   if tool == 0:
-      #     stmt.Tool = robCnt.Tools[0]
-      #   else:
-      #     stmt.Tool = robCnt.Tools[tool - 1].Name
-      #
-      #   try:
-      #     posFrame.JointTurns4 = jt1
-      #     posFrame.JointTurns5 = jt2
-      #     posFrame.JointTurns6 = jt3
-      #   except:
-      #     pass
-      posFrame.Name = p_name_
-      stmt.Base = robCnt.Bases[0]
-      stmt.Tool = robCnt.Tools[-1]
-      #
-      #   # endif
-      #   stmt.createProperty(VC_INTEGER, 'INDEX')
-      #   stmt.INDEX = pindex
-      # endfor
-
-  # i=0
-  # while i<len(robCnt.Tools):
-  #   if robCnt.Tools[i].Name==tool.Name:
-  #     print "name %s" %tool.Name
-  #   i=i+1
-      #robCnt.Tools[tindex - 1].PositionMatrix = m
-
-  if var_data_:
-    for v in var_data_:
-      if not v==[]:
-        #print "v1: %s" % v
-        prop=[]
-      #comment=delChars(n.group(3))
-      #print "comment: %s" %comment
-      # if val or comment:
-        v_name_ = v[0]
-      #print "v1: %s" %v[1]
-        if len(v)>1:
-          val = v[1]
-          if len(v[1])==1:
-
-            prop = comp.createProperty(VC_REAL, 'Registers::%s' % v_name_)  # + '%s' % comment)
-          else:
-          #print "v1: %s" % len(v[1])
-            i=0
-            while i<len(v[1]):
-              prop.append(comp.createProperty(VC_REAL, 'Registers::%s' % v_name_+"_%s" %i))
-              prop[i].Value = float(val[i])
-              i+=1# + '%s' % comment)
-        else:
-          val=0
-          prop = comp.createProperty(VC_REAL, 'Registers::%s' % v_name_)  # + '%s' % comment)
-      #prop = comp.createProperty(VC_REAL, 'Registers::%s' % v_name_)# + '%s' % comment)
-
-      #prop.Group = nindex
-  return True
+  # if frames:
+  #   #tools = re_frame.finditer(toolString)
+  #   for t in frames[0]:
+  #     t_name_ = t[1]
+  #     print "tool %s" %t[2][0]
+  #     xx = t[2][0]
+  #     yy = t[2][1]
+  #     zz = t[2][2]
+  #     ww = t[2][3]
+  #     pp = t[2][4]
+  #     rr = t[2][5]
+  #     #
+  #     m = vcMatrix.new()
+  #     m.translateAbs(xx, yy, zz)
+  #     m.setWPR(ww, pp, rr)
+  #     # if tindex > len(robCnt.Tools):
+  #     tool = robCnt.addTool()
+  #     tool.Name = t_name_
+  #     # # endif
+  #     #
+  #     tool.PositionMatrix=m
+  # if position:
+  #   base = 0
+  #   tool = 0
+  #   #posregs = re_posregcart.finditer(posregString)
+  #   #print "pos_data_ %s" % pos_data_
+  #   for p in position:
+  #     p_name_ = p[1]
+  #     print "p %s" %p
+  #     # comment = preg_.group(3)
+  #     # if comment:
+  #     #   name_ = "PR[" + '%i' % pindex + ':' + comment + "]"
+  #     # else:
+  #     #   name_ = "PR[" + '%i' % pindex + "]"
+  #     routine = program.findRoutine( "POSREG_"+p_name_)
+  #     if routine:
+  #       routine.clear()
+  #     else:
+  #       routine = program.addRoutine( "POSREG_"+p_name_)
+  #     if p[0]=="Cartesian":
+  #       xx = p[2][0]
+  #       yy = p[2][1]
+  #       zz = p[2][2]
+  #       ww = p[2][3]
+  #       pp = p[2][4]
+  #       rr = p[2][5]
+  #     #cfg = preg_.group('fut')
+  #     # if cfg == 'F': cfg = 'F U T'
+  #     # if cfg == 'N': cfg = 'N U T'
+  #     # jt1 = eval(preg_.group('t1'))
+  #     #   jt2 = eval(preg_.group('t2'))
+  #     #   jt3 = eval(preg_.group('t3'))
+  #     #
+  #       m = vcMatrix.new()
+  #       m.translateAbs(xx, yy, zz)
+  #       m.setWPR(ww, pp, rr)
+  #     #
+  #       stmt = routine.addStatement(VC_STATEMENT_PTPMOTION)
+  #       posFrame = stmt.Positions[0]
+  #       posFrame.PositionInReference = m
+  #     elif p[0]=="Joint":
+  #       j1_deg_ = p[2][0]
+  #       j2_deg_ = p[2][1]
+  #       j3_deg_ = p[2][2]
+  #       j4_deg_ = p[2][3]
+  #       j5_deg_ = p[2][4]
+  #       j6_deg_ = p[2][5]
+  #
+  #
+  #
+  #       joints=[j1_deg_,j2_deg_,j3_deg_,j4_deg_,j5_deg_,j6_deg_]
+  #
+  #       stmt = routine.addStatement(VC_STATEMENT_PTPMOTION)
+  #       # read in jointvalues
+  #       posFrame = stmt.Positions[0]
+  #       mt = robCnt.createTarget()
+  #       mt.MotionType = VC_MOTIONTARGET_MT_JOINT
+  #       mt.UseJoints = True
+  #
+  #       jv = mt.JointValues
+  #       for i in xrange(len(jv)):
+  #         jv[i] = joints[i]
+  #       mt.JointValues = jv
+  #       posFrame.PositionInReference = mt.Target
+  #
+  #     #   posFrame.Configuration = cfg
+  #     #   if base == 0:
+  #     #     stmt.Base = robCnt.Bases[0]
+  #     #   else:
+  #     #     stmt.Base = robCnt.Bases[base - 1]
+  #     #   # endif
+  #     #   if tool == 0:
+  #     #     stmt.Tool = robCnt.Tools[0]
+  #     #   else:
+  #     #     stmt.Tool = robCnt.Tools[tool - 1].Name
+  #     #
+  #     #   try:
+  #     #     posFrame.JointTurns4 = jt1
+  #     #     posFrame.JointTurns5 = jt2
+  #     #     posFrame.JointTurns6 = jt3
+  #     #   except:
+  #     #     pass
+  #     posFrame.Name = p_name_
+  #     stmt.Base = robCnt.Bases[0]
+  #     stmt.Tool = robCnt.Tools[-1]
+  #     #
+  #     #   # endif
+  #     #   stmt.createProperty(VC_INTEGER, 'INDEX')
+  #     #   stmt.INDEX = pindex
+  #     # endfor
+  #
+  # # i=0
+  # # while i<len(robCnt.Tools):
+  # #   if robCnt.Tools[i].Name==tool.Name:
+  # #     print "name %s" %tool.Name
+  # #   i=i+1
+  #     #robCnt.Tools[tindex - 1].PositionMatrix = m
+  #
+  # if register:
+  #   for v in register:
+  #     if not v==[]:
+  #       #print "v1: %s" % v
+  #       prop=[]
+  #     #comment=delChars(n.group(3))
+  #     #print "comment: %s" %comment
+  #     # if val or comment:
+  #       v_name_ = v[0]
+  #     #print "v1: %s" %v[1]
+  #       if len(v)>1:
+  #         val = v[1]
+  #         if len(v[1])==1:
+  #
+  #           prop = comp.createProperty(VC_REAL, 'Registers::%s' % v_name_)  # + '%s' % comment)
+  #         else:
+  #         #print "v1: %s" % len(v[1])
+  #           i=0
+  #           while i<len(v[1]):
+  #             prop.append(comp.createProperty(VC_REAL, 'Registers::%s' % v_name_+"_%s" %i))
+  #             prop[i].Value = float(val[i])
+  #             i+=1# + '%s' % comment)
+  #       else:
+  #         val=0
+  #         prop = comp.createProperty(VC_REAL, 'Registers::%s' % v_name_)  # + '%s' % comment)
+  #     #prop = comp.createProperty(VC_REAL, 'Registers::%s' % v_name_)# + '%s' % comment)
+  #
+  #     #prop.Group = nindex
+  return [register,frames[0],position]
 
 # def delChars(comment_):
 #   # delete space
@@ -349,7 +346,7 @@ def getToolFrames(line):
       m.setQuaternion(float(tool_def_[0][6]), float(tool_def_[0][7]), float(tool_def_[0][8]), float(tool_def_[0][5]))
       coordinates_ = [float(tool_def_[0][2]), float(tool_def_[0][3]), float(tool_def_[0][4]), m.WPR.X, m.WPR.Y, m.WPR.Z]
       #print "coord %s" %coordinates_
-      tool_data_.append([tool_name_,coordinates_])
+      tool_data_.append(["Tool",tool_name_,coordinates_])
   return tool_data_
 
 
@@ -378,7 +375,7 @@ def getGlobPos(line):
       #tool_ = getTool(line)
       #base_ = getBase(line)
       #speed_ = getSpeed(line)
-      move_data_ = [targetname, coordinates_, config_data_,"coord"]
+      move_data_ = ["Cartesian",targetname, coordinates_, [],0,17]
 
   elif not re.findall("LOCAL",line) and re.findall("PERS jointtarget",line):
     rob_target_def = re.findall(
@@ -390,7 +387,7 @@ def getGlobPos(line):
       #print "target: %s" % targetname[0]
       coordinates_ = [float(targetname[1]), float(targetname[2]), float(targetname[3]), float(targetname[4]), float(targetname[5]), float(targetname[6])]
       config_data_=[]
-      move_data_=[targetname[0],coordinates_,config_data_,"joint"]
+      move_data_=["Joint",targetname[0],coordinates_,config_data_,0,17]
 
   return move_data_
 
