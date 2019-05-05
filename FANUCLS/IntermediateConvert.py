@@ -655,7 +655,7 @@ def getWAIT(statement):
 def getSetVariable(statement):
   set_var_data=["","","","","",""]
   type_def_=re.search(
-          r"(?P<var_type>[a-zA-Z]+)" + "(?P<Nr>[0-9_]+)" + r"(?P<comment>[a-zA-Z]+)",
+          r"(?P<var_type>[a-zA-Z]+)" + "(?P<Nr>[0-9_]+)" + r"(?P<comment>[a-zA-Z0-9]+)",
     statement.TargetProperty)
   if type_def_:
     target_property_ = type_def_.group("var_type")+"["+type_def_.group("Nr")+":"+type_def_.group("comment")+"]"

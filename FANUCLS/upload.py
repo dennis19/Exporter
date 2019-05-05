@@ -8,6 +8,7 @@ import uploadBackup
 import IntermediateUpload
 import IntermediateUploadABB
 import glob
+import Test
 sp = r'\s+'
 eq = r'\s*=\s*'
 comma = r'\s*,\s*'
@@ -136,7 +137,7 @@ def upload_programs(program_,infile,filename_):
     if prog_:
 
       progname_ = prog_.group(1)
-      print "Prog:%s" % progname_
+      print "Prog:%s" % (progname_)
       program_.deleteRoutine(progname_)
       if progname_ == 'PNS0001':
         routine_ = program_.MainRoutine
@@ -205,6 +206,7 @@ def upload_programs(program_,infile,filename_):
   return True
 
 
+
 def OnStart():
   program_ = uploadBackup.getActiveProgram()
   if not program_:
@@ -242,6 +244,7 @@ def OnStart():
   #endif
   uri_ = opencmd_.Param_1
   filename_ = uri_[8:len(uri_)]
+  print "meh %s" %Test.test(filename_)
   print "%s" % uri_
   try:
     infile = open(filename_,"r")
@@ -1287,6 +1290,31 @@ def getCharSkip(line):
     i = i + 1
   return char_skip_
 
+  # from vcScript import *
+  # import ActionScript.action_script as default_actions
+  # from vcBehaviour import *
+  # comp = getComponent()
+  # exec_ = comp.findBehaviour('Executor')
+  #
+  # def OnRun():
+  #
+  #   default_actions.OnRun()
+  #
+  # def OnStart():
+  #   comp.getProperty('Flags::F100FRGJob').Value = 1
+  #   comp.getProperty('Registers::R5MWSZKGimGR').Value = 0
+  #   comp.getProperty('Registers::R6MWSHBEimGR').Value = 0
+  #   exec_.DigitalOutputSignals.connect(91, exec_.DigitalInputSignals, 91)
+  #   exec_.DigitalOutputSignals.connect(92, exec_.DigitalInputSignals, 92)
+  #   exec_.DigitalOutputSignals.connect(55, exec_.DigitalInputSignals, 55)
+  #   exec_.DigitalOutputSignals.connect(56, exec_.DigitalInputSignals, 56)
+  #   exec_.DigitalOutputSignals.connect(69, exec_.DigitalInputSignals, 69)
+  #   default_actions.OnStart()
+  #
+  # def OnReset():
+  #   default_actions.OnReset()
+  #
+  # default_actions.AutoConfigure()
 def WAIT_GET_PROCESS_HANDLER_SCRIPT():
   return """
 from vcRslProcessHandler import *
@@ -1305,7 +1333,7 @@ def OnStatementExecute(exec_, stat):
     cont_=0
     while i<=2:
       if comp.getProperty(curr_state_.getProperty("Variable %s" %i).Value):
-        if comp.getProperty(curr_state_.getProperty("Variable %s" %i).Value).Value==curr_state_.getProperty("Value %s" %i).Value:
+        if int(comp.getProperty(curr_state_.getProperty("Variable %s" %i).Value).Value)==int(curr_state_.getProperty("Value %s" %i).Value):
           cont_=1
           break
 
@@ -1409,6 +1437,7 @@ def OnStatementExecute(exec_, stat):
   #exec_.Controller.Speed=int(speed_)
   #exec_.Controller.Acc=int(acc_)
   #curr_state_.CartesianSpeed=int(speed_)
+  exec_.Controller.InitialTool=curr_state_.getProperty("Tool")
   mt=exec_.Controller.createTarget()
   mt.MotionType = VC_MOTIONTARGET_MT_LINEAR 
   mt.Target=stat.Positions[0].PositionInReference
@@ -1455,9 +1484,11 @@ def OnStatementExecute(exec_, stat):
   curr_state_=exec_.CurrentStatement
   routine_=exec_.Program.findRoutine(curr_state_.getProperty('CallRoutine').Value)
   if curr_state_.getProperty('Parameter_1'):
-    routine_.Statements[0].ValueExpression=str(curr_state_.getProperty('Parameter_1').Value)
+    #print "state %s" %routine_.Statements[0].Properties[2].Value
+    routine_.Statements[0].ValueExpression=int(curr_state_.getProperty('Parameter_1').Value)
   if curr_state_.getProperty('Parameter_2'):
-    routine_.Statements[1].ValueExpression=str(curr_state_.getProperty('Parameter_2').Value)
+    #routine_.Statements[1].Properties[2]=int(curr_state_.getProperty('Parameter_2').Value)
+    routine_.Statements[1].ValueExpression=int(curr_state_.getProperty('Parameter_2').Value)
 
   exec_.callRoutine(routine_,False,False)
 

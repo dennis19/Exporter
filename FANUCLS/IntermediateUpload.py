@@ -401,15 +401,20 @@ def getWait(line):
   value_def_ = re.search(variable_type_[i] + obracket + variable_nr_[i] + var_comment_split_[i] + cbracket +r"(?P<eq>[\=\<\>]+)" + r"(?P<value>[a-zA-Z0-9]+)", line)
   if value_def_:
     value_[i] = value_def_.group('value')
+  # if len(var_comment_.split(']'))<2:
+  #   wait_data = [variable_type_, variable_nr_, value_, var_comment_split_]
+  #   return wait_data
   if i<len(var_comment_.split(']'))-1:
     i = i + 1
   else:
     wait_data = [variable_type_, variable_nr_, value_, var_comment_split_]
     return wait_data
+
   while re.findall("OR",var_comment_.split(']')[i]) or re.findall("AND",var_comment_.split(']')[i]):
     port_value_ = re.search(
        r"(?P<var_type>[a-zA-Z/!]+)" + obracket + "(?P<Nr>[a-zA-Z0-9_]+)" + '(?P<comment>(?:\s*:.*)?)' ,
       var_comment_.split(']')[i])
+    print "var%s" %var_comment_.split(']')[i]
     variable_type_[i] = port_value_.group('var_type')
     variable_nr_[i] = port_value_.group('Nr')
 
